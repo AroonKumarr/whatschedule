@@ -11,6 +11,8 @@ import { TemplatesView } from '../TemplatesView';
 import { ConnectedAccountsView } from '../ConnectedAccountsView';
 import { AnalyticsView } from '../AnalyticsView';
 import { LandingPageView } from '../LandingPageView';
+import { OverviewHomeView } from './OverviewHomeView';
+import { CreatePostView } from './CreatePostView';
 import {
   Clock,
   Calendar as CalendarIcon,
@@ -153,7 +155,7 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
   onToggleTheme,
   isSending = false,
 }) => {
-  const [activeNav, setActiveNav] = useState<NavItemKey>('scheduled');
+  const [activeNav, setActiveNav] = useState<NavItemKey>('home');
   
   // Mobile single-column screen management (Screen 1: List vs. Screen 2: Conversation)
   const [mobileScreen, setMobileScreen] = useState<'list' | 'conversation'>('list');
@@ -327,7 +329,37 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
       {/* ========================================================= */}
       {/* MAIN VIEW AREA                                            */}
       {/* ========================================================= */}
-      {activeNav === 'landing' ? (
+      {activeNav === 'home' ? (
+        <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
+          <OverviewHomeView
+            stats={stats}
+            schedules={schedules}
+            contacts={contacts}
+            status={status}
+            onOpenCreatePost={() => setActiveNav('create')}
+            onNavigateTab={(tab) => setActiveNav(tab)}
+          />
+        </div>
+      ) : activeNav === 'create' ? (
+        <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
+          <CreatePostView
+            contacts={contacts}
+            onSubmit={async (formData) => {
+              const recipient = formData.get('recipient') as string;
+              const name = (formData.get('recipientName') as string) || '';
+              const content = (formData.get('content') as string) || '';
+              const file = (formData.get('media') as File) || null;
+              const scheduledAt = formData.get('scheduledAt') as string;
+              await onScheduleMessage(recipient, name, content, file, {
+                scheduledAt,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+                repeat: 'none',
+              });
+            }}
+            onSuccessNavigate={() => setActiveNav('scheduled')}
+          />
+        </div>
+      ) : activeNav === 'landing' ? (
         <div className="flex-1 h-full overflow-y-auto">
           <LandingPageView
             onEnterDashboard={() => setActiveNav('scheduled')}
