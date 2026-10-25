@@ -33,6 +33,11 @@ temp/
 *.sqlite
 *.sqlite-journal
 
+# Mobile Native Apps (Kept strictly on local MacBook until public release)
+mobile/
+android/
+ios/
+
 # OS generated files
 .DS_Store
 Thumbs.db

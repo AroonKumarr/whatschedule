@@ -43,4 +43,5 @@ export interface QueueStats {
   pending: number;
   sent: number;
   failed: number;
+  isPaused?: boolean;
 }

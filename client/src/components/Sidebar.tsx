@@ -17,6 +17,8 @@ import {
   RotateCcw,
   Trash2,
   Lock,
+  Pause,
+  Play,
 } from 'lucide-react';
 import { format, isToday, isTomorrow } from 'date-fns';
 
@@ -32,6 +34,7 @@ interface SidebarProps {
   onRetry: (id: string) => void;
   onDelete: (id: string) => void;
   onLock: () => void;
+  onTogglePause: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -46,6 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onRetry,
   onDelete,
   onLock,
+  onTogglePause,
 }) => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'sent' | 'failed'>('all');
   const [search, setSearch] = useState('');
@@ -143,6 +147,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           <button
+            onClick={onTogglePause}
+            className={`p-2 rounded-full transition-colors ${
+              stats.isPaused
+                ? 'bg-[#ea4335] text-white animate-pulse'
+                : 'text-[#aebac1] hover:text-[#e5a800]'
+            }`}
+            title={stats.isPaused ? 'Resume Scheduled Dispatches' : 'Emergency Pause: Halt All Dispatches'}
+          >
+            {stats.isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+          </button>
+
+          <button
             onClick={onLock}
             className="p-2 text-[#aebac1] hover:text-[#ea4335] rounded-full transition-colors"
             title="Lock WhatsSchedule (Master PIN)"
@@ -173,6 +189,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
         </div>
       </div>
+
+      {/* Emergency Pause Warning Banner */}
+      {stats.isPaused && (
+        <div className="bg-[#ea4335]/20 border-b border-[#ea4335]/40 px-3 py-2 flex items-center justify-between text-xs text-[#ea4335]">
+          <span className="font-semibold flex items-center gap-1.5">
+            <Pause className="w-3.5 h-3.5" />
+            <span>Emergency Pause Active</span>
+          </span>
+          <button
+            onClick={onTogglePause}
+            className="text-[11px] font-bold text-white bg-[#ea4335] px-2 py-0.5 rounded shadow hover:bg-[#d93025]"
+          >
+            Resume
+          </button>
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-1 px-3 py-2 border-b border-[#222d34] text-xs">

@@ -155,6 +155,20 @@ export const api = {
     });
   },
 
+  async pauseQueue(): Promise<void> {
+    await fetch(`${API_BASE}/queue/pause`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+  },
+
+  async resumeQueue(): Promise<void> {
+    await fetch(`${API_BASE}/queue/resume`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+  },
+
   async getStats(): Promise<QueueStats> {
     const res = await fetch(`${API_BASE}/stats`, {
       headers: this.getHeaders(),

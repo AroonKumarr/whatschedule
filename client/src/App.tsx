@@ -134,6 +134,19 @@ export const App: React.FC = () => {
     setAuthStatus((prev) => ({ ...prev, isUnlocked: false }));
   };
 
+  const handleTogglePause = async () => {
+    try {
+      if (stats.isPaused) {
+        await api.resumeQueue();
+      } else {
+        await api.pauseQueue();
+      }
+      refreshStats();
+    } catch (e) {
+      alert('Failed to update queue state');
+    }
+  };
+
   const handleSendNow = async (id: string) => {
     try {
       await api.retrySchedule(id);
@@ -239,6 +252,7 @@ export const App: React.FC = () => {
         onRetry={handleRetry}
         onDelete={handleDelete}
         onLock={handleLock}
+        onTogglePause={handleTogglePause}
       />
 
       {/* Main Right Screen Content */}

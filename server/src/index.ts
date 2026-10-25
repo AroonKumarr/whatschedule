@@ -58,6 +58,8 @@ app.get('/api/contacts', requireAuth, ApiController.getContacts);
 app.post('/api/contacts', requireAuth, ApiController.saveContact);
 app.get('/api/schedules', requireAuth, ApiController.getSchedules);
 app.post('/api/schedules', requireAuth, upload.single('media'), ApiController.createSchedule);
+app.post('/api/queue/pause', requireAuth, ApiController.pauseQueue);
+app.post('/api/queue/resume', requireAuth, ApiController.resumeQueue);
 app.post('/api/schedules/:id/cancel', requireAuth, ApiController.cancelSchedule);
 app.post('/api/schedules/:id/retry', requireAuth, ApiController.retrySchedule);
 app.delete('/api/schedules/:id', requireAuth, ApiController.deleteSchedule);

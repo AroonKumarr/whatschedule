@@ -17,10 +17,21 @@ export interface CreateScheduleInput {
 class SchedulerService {
   private cronJob: Cron | null = null;
   private isProcessing: boolean = false;
+  private isPaused: boolean = false;
   private listeners: (() => void)[] = [];
 
   constructor() {
     this.startScheduler();
+  }
+
+  public setPaused(paused: boolean) {
+    this.isPaused = paused;
+    this.notifyUpdate();
+    console.log(`[Scheduler] Queue ${paused ? 'PAUSED' : 'RESUMED'}`);
+  }
+
+  public getIsPaused(): boolean {
+    return this.isPaused;
   }
 
   public onQueueUpdate(listener: () => void) {
@@ -49,7 +60,7 @@ class SchedulerService {
   }
 
   public async processPendingQueue(): Promise<void> {
-    if (this.isProcessing) return;
+    if (this.isProcessing || this.isPaused) return;
 
     // Check if WhatsApp is connected before attempting dispatch
     const status = whatsAppService.getStatus();
@@ -222,7 +233,7 @@ class SchedulerService {
       prisma.scheduledMessage.count({ where: { status: 'failed' } }),
     ]);
 
-    return { total, pending, sent, failed };
+    return { total, pending, sent, failed, isPaused: this.isPaused };
   }
 }
 

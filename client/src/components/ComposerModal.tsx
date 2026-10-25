@@ -64,8 +64,12 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
   const [scheduledAt, setScheduledAt] = useState(defaultTomorrow9am);
   const [content, setContent] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [hasConsent, setHasConsent] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const MAX_CHAR_LIMIT = 65536; // Official WhatsApp maximum limit
+  const MAX_FILE_SIZE_MB = 100; // 100MB maximum file size limit
 
   const filteredContacts = contacts.filter((c) => {
     if (!contactSearch.trim()) return true;
@@ -85,14 +89,31 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null);
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        setError(`File is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Limit is ${MAX_FILE_SIZE_MB} MB.`);
+        setSelectedFile(null);
+        return;
+      }
+      setSelectedFile(file);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!hasConsent) {
+      setError('You must confirm that you have permission to contact this recipient.');
+      return;
+    }
+
+    if (content.length > MAX_CHAR_LIMIT) {
+      setError(`Message exceeds WhatsApp limit of ${MAX_CHAR_LIMIT} characters.`);
+      return;
+    }
 
     let finalRecipient = '';
     let finalName = recipientName;
@@ -392,18 +413,39 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
             </div>
           </div>
 
-          {/* Message Content */}
+          {/* Message Content with Live Counter */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[#8696a0] mb-2">
-              Message Text / Caption
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-[#8696a0]">
+                Message Text / Caption
+              </label>
+              <span className={`text-[11px] font-mono ${content.length > 4000 ? 'text-[#e5a800]' : 'text-[#8696a0]'}`}>
+                {content.length.toLocaleString()} / {MAX_CHAR_LIMIT.toLocaleString()} chars
+              </span>
+            </div>
             <textarea
               rows={4}
+              maxLength={MAX_CHAR_LIMIT}
               placeholder="Type your scheduled message here..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="w-full bg-[#111b21] border border-[#2a3942] rounded-xl p-3 text-sm text-[#e9edef] placeholder-[#8696a0] focus:outline-none focus:border-[#00a884] resize-none"
             />
+          </div>
+
+          {/* Compliance & Consent Confirmation */}
+          <div className="bg-[#111b21] p-3 rounded-xl border border-[#2a3942]/60">
+            <label className="flex items-start gap-2.5 cursor-pointer text-xs text-[#d1d7db]">
+              <input
+                type="checkbox"
+                checked={hasConsent}
+                onChange={(e) => setHasConsent(e.target.checked)}
+                className="mt-0.5 rounded border-[#3b4a54] bg-[#202c33] text-[#00a884] focus:ring-0"
+              />
+              <span className="leading-relaxed text-[11px] text-[#8696a0]">
+                I confirm I have prior consent or a legitimate personal/business relationship with this recipient. (Anti-Spam & PECA/GDPR compliance).
+              </span>
+            </label>
           </div>
 
           {/* Submit Button */}

@@ -131,6 +131,14 @@ export class ApiController {
         return res.status(400).json({ success: false, error: 'Scheduled date and time is required' });
       }
 
+      // Safeguard: WhatsApp character length limit (65,536 characters)
+      if (content && content.length > 65536) {
+        return res.status(400).json({
+          success: false,
+          error: `Message is too long (${content.length} characters). Maximum allowed is 65,536 characters.`,
+        });
+      }
+
       const scheduleDate = new Date(scheduledAt);
       if (isNaN(scheduleDate.getTime())) {
         return res.status(400).json({ success: false, error: 'Invalid scheduled date format' });
@@ -160,6 +168,24 @@ export class ApiController {
       });
 
       return res.json({ success: true, data: record });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  public static async pauseQueue(req: Request, res: Response) {
+    try {
+      schedulerService.setPaused(true);
+      return res.json({ success: true, message: 'All scheduled message dispatches paused' });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  public static async resumeQueue(req: Request, res: Response) {
+    try {
+      schedulerService.setPaused(false);
+      return res.json({ success: true, message: 'Scheduled message dispatches resumed' });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
     }
