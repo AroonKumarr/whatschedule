@@ -98,13 +98,12 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
     }
   }, [status.state]);
 
-  // Live Status Polling (every 2s) & 180s Countdown for Companion Phone Pairing
+  // Live Status Polling & Countdown for Phone Pairing
   useEffect(() => {
     if (!showPhonePairing || phonePairingStep !== 'code' || phoneLinkStatus === 'connected') {
       return;
     }
 
-    // 1s timer for countdown
     const secondTimer = setInterval(() => {
       setPhoneSecondsLeft((prev) => {
         if (prev <= 1) {
@@ -115,7 +114,6 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
       });
     }, 1000);
 
-    // 600ms polling for server status for instant pairing detection
     const pollTimer = setInterval(async () => {
       try {
         const res = await api.getLinkStatus(userId);
@@ -149,312 +147,278 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
 
   const handlePhonePairingSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!phoneNumber.trim()) return;
     setPhonePairingError(null);
-    setPhonePairingLoading(true);
 
+    const digitsOnly = phoneNumber.replace(/[^0-9]/g, '');
+    if (!digitsOnly || digitsOnly.length < 7) {
+      setPhonePairingError('Please enter a valid phone number.');
+      return;
+    }
+
+    const fullInternational = `${countryCode.replace(/[^0-9]/g, '')}${digitsOnly.replace(/^0+/, '')}`;
+
+    setPhonePairingLoading(true);
     try {
-      const fullPhone = `${countryCode.trim()}${phoneNumber.trim()}`;
-      const res = await api.linkPhone(fullPhone, userId);
+      const res = await api.linkPhone(userId, fullInternational);
       setPhonePairingCode(res.formattedCode || res.code);
       setPhoneSecondsLeft(res.expiresInSec || 180);
-      setPhoneLinkStatus('code_ready');
       setPhonePairingStep('code');
+      setPhoneLinkStatus('code_ready');
     } catch (err: any) {
-      setPhonePairingError(err.message || 'Failed to request pairing code. Please verify the phone number.');
-      setPhoneLinkStatus('error');
+      setPhonePairingError(err?.message || 'Failed to request pairing code. Please try again.');
     } finally {
       setPhonePairingLoading(false);
     }
   };
 
-  const handleCancelPhonePairing = async () => {
-    setShowPhonePairing(false);
-    setPhonePairingStep('input');
-    setPhoneLinkStatus('idle');
-    try {
-      await api.cancelLink(userId);
-    } catch (e) {}
-  };
-
   const handleCopyCode = () => {
     if (!phonePairingCode) return;
-    const clean = phonePairingCode.replace(/[^A-Za-z0-9]/g, '');
-    navigator.clipboard.writeText(clean);
+    navigator.clipboard.writeText(phonePairingCode.replace(/[^A-Za-z0-9]/g, ''));
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
+  const handleCancelPhonePairing = async () => {
+    try {
+      await api.cancelLink(userId);
+    } catch (e) {}
+    setShowPhonePairing(false);
+    setPhonePairingStep('input');
+    setPhonePairingCode('');
+    setPhonePairingError(null);
+  };
+
   return (
-    <div className="min-h-screen bg-[#F6F9F7] dark:bg-[#101815] text-[#16231F] dark:text-[#F2F7F4] flex flex-col justify-between p-4 sm:p-6 lg:p-8 antialiased selection:bg-[#25C993] selection:text-[#0D3027] relative overflow-x-hidden">
+    <div className="min-h-screen w-full bg-[#F4F9FA] dark:bg-[#07131F] text-slate-900 dark:text-slate-100 flex flex-col justify-between p-4 sm:p-6 lg:p-8 transition-colors duration-200 relative overflow-hidden select-none">
       
-      {/* Subtle Ambient Background Accents */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-32 -right-32 w-96 h-96 rounded-full bg-[#E5F5EF]/60 dark:bg-[#1D3830]/20 blur-3xl"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-[#E5F5EF]/60 dark:bg-[#1D3830]/20 blur-3xl"
-      />
+      {/* Subtle Background Glows matching mockups */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-cyan-400/10 dark:bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-purple-500/10 dark:bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* ========================================================= */}
       {/* 1. TOP HEADER                                             */}
       {/* ========================================================= */}
-      <header
-        role="banner"
-        className="max-w-[960px] mx-auto w-full flex items-center justify-between pb-6 sm:pb-8 relative z-10"
-      >
-        {/* Brand Lockup: Logo + Wordmark + Open Source Pill */}
+      <header className="max-w-[1040px] mx-auto w-full flex items-center justify-between z-10 pt-1 pb-4">
+        {/* Brand */}
         <div className="flex items-center gap-3">
-          <BrandLogo size={42} />
+          <BrandLogo size={38} />
           <div>
-            <div className="flex items-center gap-2 tracking-tight leading-none">
-              <div className="flex items-center">
-                <span className="text-xl sm:text-2xl font-bold text-[#0D3027] dark:text-[#F2F7F4]">
-                  Whats
-                </span>
-                <span className="text-xl sm:text-2xl font-bold text-[#087F5B] dark:text-[#25C993]">
-                  Schedule
-                </span>
-              </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                Whats<span className="text-blue-500 dark:text-blue-400">Schedule</span>
+              </span>
               <a
                 href="https://github.com/AroonKumarr/whatschedule"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-[#087F5B] dark:text-[#25C993] bg-[#E5F5EF] dark:bg-[#1D3830] px-2.5 py-0.5 rounded-full border border-[#DCE7E1] dark:border-[#2D3D35] hover:opacity-85 transition-opacity"
+                className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/50 px-2.5 py-0.5 rounded-full border border-cyan-200/60 dark:border-cyan-800/60 hover:opacity-85 transition-opacity"
               >
                 <span>Open Source</span>
                 <ExternalLink className="w-2.5 h-2.5" />
               </a>
             </div>
-            <p className="text-xs text-[#5D7168] dark:text-[#8A9A91] mt-1 font-normal">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               Message scheduling, made simple.
             </p>
           </div>
         </div>
 
-        {/* Header Right Controls: Device Indicator + Theme Toggle */}
+        {/* Right Controls: Runs Locally Pill + Theme Toggle */}
         <div className="flex items-center gap-2.5 sm:gap-3">
-          {/* Runs Locally on your device pill */}
-          <div className="flex items-center gap-2 text-xs font-medium text-[#16231F] dark:text-[#F2F7F4] bg-[#E5F5EF] dark:bg-[#1E2B25] px-3 py-1.5 rounded-full border border-[#DCE7E1] dark:border-[#2D3D35] shadow-xs">
-            <span className="w-2 h-2 rounded-full bg-[#25C993] dark:bg-[#25C993] animate-pulse motion-reduce:animate-none" />
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white/80 dark:bg-[#0D1D2C]/80 px-3.5 py-1.5 rounded-full border border-slate-200/80 dark:border-slate-800/80 shadow-xs backdrop-blur-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="hidden sm:inline">Runs locally on your device</span>
             <span className="sm:hidden">Local</span>
           </div>
 
-          {/* Animated Smooth Sun / Moon Theme Toggle */}
-          <ThemeToggle
-            themeMode={themeMode}
-            onToggleTheme={onToggleTheme}
-          />
+          <ThemeToggle themeMode={themeMode} onToggleTheme={onToggleTheme} />
         </div>
       </header>
 
       {/* ========================================================= */}
-      {/* 2. MAIN CENTERED CARD                                     */}
+      {/* 2. MAIN CENTERED CARD (Redesigned per Mockup)             */}
       {/* ========================================================= */}
-      <main
-        role="main"
-        className="max-w-[960px] mx-auto w-full my-auto relative z-10"
-      >
-        <div className="bg-white dark:bg-[#17211D] rounded-2xl sm:rounded-3xl shadow-sm border border-[#DCE7E1] dark:border-[#2D3D35] p-6 sm:p-10 transition-colors duration-150">
+      <main className="max-w-[1040px] mx-auto w-full my-auto z-10 py-2 sm:py-4">
+        <div className="bg-white/95 dark:bg-[#0C1A27]/95 backdrop-blur-md rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-black/40 border border-slate-200/70 dark:border-slate-800/80 p-6 sm:p-10 lg:p-12 transition-all">
           
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-14 items-center">
             
             {/* ----------------------------------------------------- */}
-            {/* LEFT COLUMN: Connection Instructions & Values         */}
+            {/* LEFT COLUMN: Connection Instructions                  */}
             {/* ----------------------------------------------------- */}
-            <div className="w-full md:col-span-7 flex flex-col justify-between">
-              
+            <div className="w-full md:col-span-7 flex flex-col justify-between space-y-6">
               <div>
                 {/* Category Tracking Label */}
-                <span className="text-[11px] font-bold tracking-widest text-[#087F5B] dark:text-[#25C993] uppercase block">
+                <span className="text-[11px] font-black tracking-widest text-cyan-600 dark:text-cyan-400 uppercase block">
                   Connect your WhatsApp
                 </span>
 
-                {/* Main Heading */}
-                <h1 className="text-2xl sm:text-[32px] font-bold text-[#16231F] dark:text-[#F2F7F4] tracking-tight leading-snug mt-1.5">
-                  Link your WhatsApp to start scheduling
+                {/* Main Heading with Gradient "scheduling" */}
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-snug mt-2">
+                  Link your WhatsApp to start{' '}
+                  <span className="bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 dark:from-blue-400 dark:via-indigo-300 dark:to-purple-400 bg-clip-text text-transparent">
+                    scheduling
+                  </span>
                 </h1>
 
                 {/* Subtitle */}
-                <p className="text-sm text-[#5D7168] dark:text-[#B2C1B8] mt-2 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium leading-relaxed">
                   Link your WhatsApp account using your phone camera. Takes about 30 seconds.
                 </p>
 
-                {/* Subheading: Connect in three steps */}
-                <div className="text-[11px] font-semibold tracking-wider text-[#788980] dark:text-[#8A9A91] uppercase mt-7 mb-3.5">
+                {/* Steps Section Heading */}
+                <div className="text-[11px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase mt-7 mb-4">
                   Connect in three steps
                 </div>
 
-                {/* 3 Numbered Steps with clean pill circles */}
-                <nav aria-label="WhatsApp Connection Steps">
-                  <ol className="space-y-4">
-                    {/* Step 01 */}
-                    <li className="flex items-start gap-3.5">
-                      <span
-                        aria-hidden="true"
-                        className="w-7 h-7 rounded-full bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] font-semibold text-xs flex items-center justify-center shrink-0 border border-[#DCE7E1]/80 dark:border-[#2D3D35]"
-                      >
-                        01
+                {/* 3 Numbered Steps with matching gradient badge circles */}
+                <ol className="space-y-4">
+                  {/* Step 01 */}
+                  <li className="flex items-start gap-3.5">
+                    <span className="w-7 h-7 rounded-full bg-blue-500 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                      01
+                    </span>
+                    <div className="pt-0.5">
+                      <strong className="block text-sm font-bold text-slate-900 dark:text-white">
+                        Open WhatsApp
+                      </strong>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
+                        Use WhatsApp on your phone.
                       </span>
-                      <div className="pt-0.5">
-                        <strong className="block text-sm font-semibold text-[#16231F] dark:text-[#F2F7F4]">
-                          Open WhatsApp
-                        </strong>
-                        <span className="text-xs text-[#5D7168] dark:text-[#8A9A91] block mt-0.5">
-                          Use WhatsApp on your phone.
-                        </span>
-                      </div>
-                    </li>
+                    </div>
+                  </li>
 
-                    {/* Step 02 */}
-                    <li className="flex items-start gap-3.5">
-                      <span
-                        aria-hidden="true"
-                        className="w-7 h-7 rounded-full bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] font-semibold text-xs flex items-center justify-center shrink-0 border border-[#DCE7E1]/80 dark:border-[#2D3D35]"
-                      >
-                        02
+                  {/* Step 02 */}
+                  <li className="flex items-start gap-3.5">
+                    <span className="w-7 h-7 rounded-full bg-indigo-500 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                      02
+                    </span>
+                    <div className="pt-0.5">
+                      <strong className="block text-sm font-bold text-slate-900 dark:text-white">
+                        Open Linked devices
+                      </strong>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
+                        Find it in Menu or Settings.
                       </span>
-                      <div className="pt-0.5">
-                        <strong className="block text-sm font-semibold text-[#16231F] dark:text-[#F2F7F4]">
-                          Open Linked devices
-                        </strong>
-                        <span className="text-xs text-[#5D7168] dark:text-[#8A9A91] block mt-0.5">
-                          Find it in Menu or Settings.
-                        </span>
-                      </div>
-                    </li>
+                    </div>
+                  </li>
 
-                    {/* Step 03 */}
-                    <li className="flex items-start gap-3.5">
-                      <span
-                        aria-hidden="true"
-                        className="w-7 h-7 rounded-full bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] font-semibold text-xs flex items-center justify-center shrink-0 border border-[#DCE7E1]/80 dark:border-[#2D3D35]"
-                      >
-                        03
+                  {/* Step 03 */}
+                  <li className="flex items-start gap-3.5">
+                    <span className="w-7 h-7 rounded-full bg-purple-500 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                      03
+                    </span>
+                    <div className="pt-0.5">
+                      <strong className="block text-sm font-bold text-slate-900 dark:text-white">
+                        Link a device
+                      </strong>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
+                        Scan the code to connect.
                       </span>
-                      <div className="pt-0.5">
-                        <strong className="block text-sm font-semibold text-[#16231F] dark:text-[#F2F7F4]">
-                          Link a device
-                        </strong>
-                        <span className="text-xs text-[#5D7168] dark:text-[#8A9A91] block mt-0.5">
-                          Scan the code to connect.
-                        </span>
-                      </div>
-                    </li>
-                  </ol>
-                </nav>
+                    </div>
+                  </li>
+                </ol>
               </div>
 
-              {/* Bottom Supporting Row: Session Stays & Scheduling Control */}
-              <div className="mt-8 pt-6 border-t border-[#DCE7E1] dark:border-[#2D3D35] grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Group 1: Local Session */}
-                <div className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-[#E5F5EF] dark:bg-[#1D3830] flex items-center justify-center text-[#087F5B] dark:text-[#25C993] shrink-0 mt-0.5">
+              {/* Bottom Supporting Info Boxes */}
+              <div className="pt-6 border-t border-slate-200/80 dark:border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Security Box */}
+                <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60">
+                  <div className="w-8 h-8 rounded-xl bg-cyan-100 dark:bg-cyan-950/80 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
                     <ShieldCheck className="w-4 h-4" />
                   </div>
                   <div>
-                    <h2 className="text-xs font-semibold text-[#16231F] dark:text-[#F2F7F4]">
+                    <h2 className="text-xs font-bold text-slate-900 dark:text-white">
                       Your session stays on your device
                     </h2>
-                    <p className="text-[11px] text-[#5D7168] dark:text-[#8A9A91] leading-relaxed mt-0.5">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-0.5">
                       Your messages and media remain private and secure.
                     </p>
                   </div>
                 </div>
 
-                {/* Group 2: Scheduling Control */}
-                <div className="flex items-start gap-3 sm:border-l sm:border-[#DCE7E1] sm:dark:border-[#2D3D35] sm:pl-4">
-                  <div className="w-7 h-7 rounded-lg bg-[#E5F5EF] dark:bg-[#1D3830] flex items-center justify-center text-[#087F5B] dark:text-[#25C993] shrink-0 mt-0.5">
+                {/* Control Box */}
+                <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
                     <Code2 className="w-4 h-4" />
                   </div>
                   <div>
-                    <h2 className="text-xs font-semibold text-[#16231F] dark:text-[#F2F7F4]">
+                    <h2 className="text-xs font-bold text-slate-900 dark:text-white">
                       Schedule with control
                     </h2>
-                    <p className="text-[11px] text-[#5D7168] dark:text-[#8A9A91] leading-relaxed mt-0.5">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-0.5">
                       Send messages and media at your preferred time, all from your device.
                     </p>
                   </div>
                 </div>
               </div>
-
             </div>
 
             {/* ----------------------------------------------------- */}
-            {/* RIGHT COLUMN: Real Live QR Pairing Surface            */}
+            {/* RIGHT COLUMN: Real Live QR Box Container              */}
             {/* ----------------------------------------------------- */}
             <div className="w-full md:col-span-5 flex flex-col items-center">
               
-              {/* Pale Mint / Slate Box Container */}
-              <div className="w-full max-w-[340px] bg-[#F0F5F2] dark:bg-[#1E2B25] rounded-2xl p-6 sm:p-7 border border-[#DCE7E1]/80 dark:border-[#2D3D35] flex flex-col items-center justify-center text-center shadow-xs">
+              {/* Box Container matching Mockup */}
+              <div className="w-full max-w-[340px] bg-slate-50/90 dark:bg-[#07131F]/90 rounded-3xl p-6 sm:p-7 border border-slate-200/80 dark:border-slate-800/80 flex flex-col items-center justify-center text-center shadow-sm">
                 
-                {/* Real White QR Code Surface */}
-                <div
-                  className="relative w-[230px] h-[230px] bg-white p-3.5 rounded-xl border border-[#DCE7E1] dark:border-[#2D3D35] shadow-xs flex items-center justify-center overflow-hidden"
-                  aria-live="polite"
-                  aria-atomic="true"
-                >
-                  {/* STATE 1: CONNECTED */}
+                {/* White QR Code Card with border */}
+                <div className="relative w-[230px] h-[230px] bg-white p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-center overflow-hidden">
+                  
+                  {/* Connected State */}
                   {status.state === 'connected' ? (
-                    <div className="flex flex-col items-center gap-2.5 text-center p-2">
-                      <div className="w-14 h-14 rounded-full bg-[#E5F5EF] dark:bg-[#1D3830] flex items-center justify-center text-[#087F5B] dark:text-[#25C993] animate-bounce motion-reduce:animate-none">
+                    <div className="flex flex-col items-center gap-2 text-center p-2">
+                      <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center animate-bounce">
                         <CheckCircle2 className="w-9 h-9" />
                       </div>
-                      <div>
-                        <span className="text-sm font-bold text-[#16231F] block">
-                          Linked Successfully!
-                        </span>
-                        <span className="text-xs text-[#5D7168] font-mono mt-1 block">
-                          {status.user?.id ? `ID: ${status.user.id}` : 'WhatsApp Session Active'}
-                        </span>
-                      </div>
+                      <span className="text-sm font-bold text-slate-900 block">
+                        Linked Successfully!
+                      </span>
+                      <span className="text-xs text-slate-500 font-mono">
+                        {status.user?.id ? `ID: ${status.user.id}` : 'WhatsApp Session Active'}
+                      </span>
                     </div>
                   ) : status.state === 'error' ? (
-                    /* STATE 2: ERROR */
                     <div className="flex flex-col items-center gap-2 text-center p-2">
-                      <AlertCircle className="w-9 h-9 text-[#B42318] dark:text-[#FF938B]" />
-                      <span className="text-xs font-semibold text-[#16231F]">
+                      <AlertCircle className="w-9 h-9 text-rose-500" />
+                      <span className="text-xs font-bold text-slate-900">
                         Connection Interrupted
                       </span>
-                      <p className="text-[11px] text-[#5D7168] leading-tight">
-                        Check your device connection and click reload.
+                      <p className="text-[11px] text-slate-500">
+                        Check your device connection and reload.
                       </p>
                       <button
                         type="button"
                         onClick={handleManualRefresh}
-                        className="mt-1 bg-[#087F5B] text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-[#06684B] transition-colors"
+                        className="mt-1 bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg"
                       >
-                        Retry Connection
+                        Retry
                       </button>
                     </div>
                   ) : status.qrCodeUrl ? (
-                    /* STATE 3: REAL QR CODE (Active or Expired) */
                     <div className="relative w-full h-full flex items-center justify-center">
                       <img
                         src={status.qrCodeUrl}
-                        alt="WhatsApp Pairing QR Code. Scan using WhatsApp Linked Devices on your phone."
+                        alt="WhatsApp Pairing QR Code"
                         className={`w-full h-full object-contain transition-all duration-300 ${
                           isExpired ? 'blur-[4px] opacity-20 scale-95' : 'opacity-100 scale-100'
                         }`}
                       />
 
-                      {/* EXPIRED OVERLAY */}
+                      {/* Expired Overlay */}
                       {isExpired && (
-                        <div className="absolute inset-0 bg-white/90 dark:bg-[#17211D]/90 backdrop-blur-xs rounded-lg flex flex-col items-center justify-center p-3 text-center">
-                          <Clock className="w-7 h-7 text-[#9A6700] dark:text-[#F3C969] mb-1" />
-                          <span className="text-xs font-bold text-[#16231F] dark:text-[#F2F7F4] block">
+                        <div className="absolute inset-0 bg-white/95 backdrop-blur-xs rounded-xl flex flex-col items-center justify-center p-3 text-center">
+                          <Clock className="w-7 h-7 text-amber-500 mb-1" />
+                          <span className="text-xs font-bold text-slate-900 block">
                             Code Expired
                           </span>
-                          <span className="text-[10px] text-[#788980] dark:text-[#8A9A91] mb-2.5 block">
-                            Codes refresh for your security
+                          <span className="text-[10px] text-slate-500 mb-2.5 block">
+                            Codes refresh for security
                           </span>
                           <button
                             type="button"
                             onClick={handleManualRefresh}
-                            className="bg-[#087F5B] dark:bg-[#25C993] hover:bg-[#06684B] dark:hover:bg-[#46D9A6] text-white dark:text-[#0D3027] text-xs font-semibold px-3.5 py-1.5 rounded-lg shadow-xs flex items-center gap-1.5 transition-transform duration-150 hover:scale-105 active:scale-95"
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg shadow-xs flex items-center gap-1.5"
                           >
                             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
                             <span>Reload Code</span>
@@ -463,29 +427,22 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
                       )}
                     </div>
                   ) : status.state === 'connecting' ? (
-                    /* STATE 4: LOADING / INITIALIZING SHIMMER */
                     <div className="flex flex-col items-center justify-center gap-2.5 p-3 text-center">
-                      <RefreshCw className="w-7 h-7 text-[#087F5B] dark:text-[#25C993] animate-spin motion-reduce:animate-none" />
-                      <div className="space-y-0.5">
-                        <span className="text-xs font-semibold text-[#16231F] block">
-                          Generating pairing code...
-                        </span>
-                        <span className="text-[10px] text-[#5D7168] block">
-                          Connecting to WhatsApp multi-device
-                        </span>
-                      </div>
+                      <RefreshCw className="w-7 h-7 text-blue-500 animate-spin" />
+                      <span className="text-xs font-semibold text-slate-800">
+                        Generating pairing code...
+                      </span>
                     </div>
                   ) : (
-                    /* STATE 5: STANDBY */
-                    <div className="flex flex-col items-center gap-2 text-[#788980] text-center p-2">
-                      <QrCode className="w-10 h-10 text-[#788980]" />
+                    <div className="flex flex-col items-center gap-2 text-slate-400 text-center p-2">
+                      <QrCode className="w-10 h-10" />
                       <span className="text-xs font-medium">Ready to Pair</span>
                     </div>
                   )}
                 </div>
 
-                {/* Below QR: Countdown Timer */}
-                <div className="mt-4 flex items-center gap-1.5 text-xs text-[#087F5B] dark:text-[#25C993] font-medium">
+                {/* Expiry Text */}
+                <div className="mt-4 flex items-center gap-1.5 text-xs text-cyan-600 dark:text-cyan-400 font-semibold">
                   <Clock className="w-3.5 h-3.5" />
                   <span>
                     {status.state === 'qr_ready' && !isExpired
@@ -496,21 +453,21 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
                   </span>
                 </div>
 
-                {/* Below QR: Refresh Control Button */}
-                <div className="mt-2.5 w-full">
+                {/* Refresh CTA Button (Gradient Blue-to-Purple matching mockup) */}
+                <div className="mt-3 w-full">
                   <button
                     type="button"
                     onClick={handleManualRefresh}
                     disabled={isRefreshing}
-                    className="w-full bg-[#E5F5EF] hover:bg-[#D4ECE2] dark:bg-[#1D3830] dark:hover:bg-[#254A40] text-[#087F5B] dark:text-[#25C993] text-xs font-semibold py-2 px-4 rounded-xl transition-colors duration-150 shadow-2xs flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#087F5B] dark:focus-visible:ring-[#25C993] focus-visible:outline-none disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 hover:opacity-95 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-md shadow-indigo-500/25 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
                     <span>Refresh</span>
                   </button>
                 </div>
 
-                {/* Small Helper Text */}
-                <span className="text-[11px] text-[#788980] dark:text-[#8A9A91] mt-2 block">
+                {/* Scan with WhatsApp text */}
+                <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-2.5 block font-medium">
                   Scan with WhatsApp
                 </span>
               </div>
@@ -522,29 +479,26 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
         </div>
 
         {/* ======================================================= */}
-        {/* 3. BOTTOM BAR BELOW THE CARD                            */}
+        {/* 3. BOTTOM FOOTER                                        */}
         {/* ======================================================= */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#788980] dark:text-[#8A9A91] mt-5 px-3">
-          {/* Left: GitHub Link & Disclaimer */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 mt-5 px-3">
           <div className="flex items-center gap-2 text-center sm:text-left">
             <a
               href="https://github.com/AroonKumarr/whatschedule"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#087F5B] dark:hover:text-[#25C993] transition-colors focus-visible:ring-2 focus-visible:ring-[#087F5B] rounded"
-              aria-label="View source code on GitHub"
+              className="hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5 inline mr-1" />
               <span>Independent open-source software. Not affiliated with or endorsed by WhatsApp or Meta.</span>
             </a>
           </div>
 
-          {/* Right: Phone Number Pairing Option */}
           <div>
             <button
               type="button"
               onClick={() => setShowPhonePairing(true)}
-              className="text-[#087F5B] dark:text-[#25C993] hover:underline font-medium inline-flex items-center gap-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-[#087F5B] rounded px-1 focus-visible:outline-none"
+              className="text-cyan-600 dark:text-cyan-400 hover:underline font-bold inline-flex items-center gap-1.5 transition-colors"
             >
               <Phone className="w-3.5 h-3.5" />
               <span>Link with phone number instead</span>
@@ -552,203 +506,112 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
             </button>
           </div>
         </div>
+
+        <div className="text-center text-[11px] text-slate-400 dark:text-slate-500 mt-3">
+          © 2026 Aroon Kumar. All rights reserved.
+        </div>
       </main>
 
       {/* ========================================================= */}
-      {/* 4. EXPANDABLE PHONE PAIRING MODAL                         */}
+      {/* 4. PHONE NUMBER PAIRING MODAL                             */}
       {/* ========================================================= */}
       {showPhonePairing && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-labelledby="phone-modal-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) handleCancelPhonePairing();
-          }}
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
         >
-          <div className="bg-[#141B18] text-[#F2F7F4] rounded-3xl border border-[#273830] p-6 max-w-md w-full shadow-2xl space-y-4 relative">
-            <button
-              type="button"
-              onClick={handleCancelPhonePairing}
-              className="absolute top-4 right-4 text-[#8A9A91] hover:text-white p-1.5 rounded-xl hover:bg-white/5 transition-colors"
-              aria-label="Close dialog"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#1D3830] border border-[#25C993]/20 flex items-center justify-center text-[#25C993]">
-                <Smartphone className="w-5 h-5" />
+          <div className="relative w-full max-w-md bg-white dark:bg-[#0C1A27] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 sm:p-7 text-slate-900 dark:text-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <Smartphone className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold">Link with Phone Number</h3>
+                  <p className="text-[11px] text-slate-500">Pair without camera using an 8-character code</p>
+                </div>
               </div>
-              <div>
-                <h3 id="phone-modal-title" className="text-base font-bold text-white tracking-tight">
-                  Link with Phone Number
-                </h3>
-                <span className="text-[11px] text-[#8A9A91]">
-                  Official companion device pairing via 8-digit code
-                </span>
-              </div>
+              <button
+                type="button"
+                onClick={handleCancelPhonePairing}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            {phoneLinkStatus === 'connected' ? (
-              <div className="space-y-4 text-center py-4">
-                <div className="w-12 h-12 rounded-full bg-[#1D3830] text-[#25C993] flex items-center justify-center mx-auto animate-bounce">
-                  <CheckCircle2 className="w-7 h-7" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white">
-                    WhatsApp Linked Successfully!
-                  </h4>
-                  <p className="text-xs text-[#8A9A91] mt-1">
-                    Your session is now active and ready for scheduling.
-                  </p>
-                </div>
+            {phonePairingError && (
+              <div className="mt-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300">
+                {phonePairingError}
               </div>
-            ) : phonePairingStep === 'input' ? (
-              <form onSubmit={handlePhonePairingSubmit} className="space-y-4 pt-1">
-                <p className="text-xs text-[#B2C1B8] leading-relaxed">
-                  Enter your mobile number to generate a secure pairing code. Select your country code or search from the dropdown:
-                </p>
+            )}
 
-                {phonePairingError && (
-                  <div className="p-3 rounded-xl bg-[#2D1615] border border-[#5B2321] text-xs text-[#FF938B] flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span className="leading-tight">{phonePairingError}</span>
-                  </div>
-                )}
-
-                <div className="flex gap-2 items-center">
-                  <CountryCodePicker
-                    value={countryCode}
-                    onChange={(dial) => setCountryCode(dial)}
-                  />
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    aria-label="Phone Number"
-                    className="flex-1 h-10 bg-[#101815] border border-[#273830] focus:border-[#25C993] rounded-xl px-3 text-xs text-white font-mono focus-visible:ring-2 focus-visible:ring-[#25C993] focus-visible:outline-none placeholder-[#5A6D63]"
-                    placeholder="e.g. 300 1234567 or 12334..."
-                    autoFocus
-                    required
-                  />
-                </div>
-
-                <p className="text-[11px] text-[#8A9A91]">
-                  Supports local numbers (e.g. <span className="font-mono text-[#25C993]">0300 1234567</span>) or international numbers directly.
-                </p>
-
-                <div className="pt-1">
-                  <button
-                    type="submit"
-                    disabled={phonePairingLoading}
-                    className="w-full bg-[#25C993] hover:bg-[#46D9A6] text-[#0D3027] text-xs font-bold py-2.5 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-xs disabled:opacity-50 cursor-pointer"
-                  >
-                    {phonePairingLoading ? (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Requesting official code from WhatsApp...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Generate Verification Code</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            ) : phoneLinkStatus === 'expired' ? (
-              <div className="space-y-4 text-center py-4">
-                <div className="w-12 h-12 rounded-full bg-[#2D1615] text-[#FF938B] flex items-center justify-center mx-auto">
-                  <Clock className="w-6 h-6" />
-                </div>
+            {phonePairingStep === 'input' ? (
+              <form onSubmit={handlePhonePairingSubmit} className="mt-4 space-y-4">
                 <div>
-                  <h4 className="text-sm font-bold text-white">
-                    Pairing Code Expired
-                  </h4>
-                  <p className="text-xs text-[#8A9A91] mt-1">
-                    WhatsApp pairing codes expire after 3 minutes for security. Please generate a fresh code.
-                  </p>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Phone Number
+                  </label>
+                  <div className="flex gap-2">
+                    <CountryCodePicker value={countryCode} onChange={setCountryCode} />
+                    <input
+                      type="tel"
+                      placeholder="300 1234567"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                      autoFocus
+                    />
+                  </div>
                 </div>
+
                 <button
-                  type="button"
-                  onClick={() => handlePhonePairingSubmit()}
+                  type="submit"
                   disabled={phonePairingLoading}
-                  className="w-full bg-[#25C993] hover:bg-[#46D9A6] text-[#0D3027] text-xs font-bold py-2.5 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                  className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:opacity-95 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${phonePairingLoading ? 'animate-spin' : ''}`} />
-                  <span>Generate Fresh Code</span>
+                  {phonePairingLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Code2 className="w-3.5 h-3.5" />}
+                  <span>Get Pairing Code</span>
                 </button>
-              </div>
+              </form>
             ) : (
-              <div className="space-y-4 text-center py-2">
-                <div className="flex items-center justify-between text-xs text-[#B2C1B8]">
-                  <span>Enter this code on your phone:</span>
-                  <span className="font-mono font-semibold text-[#25C993] flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>
-                      {Math.floor(phoneSecondsLeft / 60)}:{(phoneSecondsLeft % 60).toString().padStart(2, '0')}
-                    </span>
-                  </span>
-                </div>
+              <div className="mt-4 space-y-4 text-center">
+                <p className="text-xs text-slate-500">
+                  Enter this code in WhatsApp on your phone (Linked Devices &gt; Link with phone number):
+                </p>
 
-                <div className="flex items-center justify-center gap-2">
-                  <div className="text-2xl font-mono font-bold tracking-widest text-[#25C993] bg-[#1D3830] py-3.5 px-6 rounded-2xl border border-[#25C993]/40 select-all shadow-inner">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center gap-3">
+                  <span className="font-mono text-2xl font-black tracking-widest text-blue-600 dark:text-blue-400">
                     {phonePairingCode}
-                  </div>
+                  </span>
                   <button
                     type="button"
                     onClick={handleCopyCode}
-                    className="p-3.5 bg-[#1E2B25] hover:bg-[#254A40] text-white rounded-2xl border border-[#2D3D35] transition-colors flex items-center justify-center cursor-pointer"
-                    title="Copy Pairing Code"
-                    aria-label="Copy Pairing Code"
+                    className="p-2 rounded-xl bg-white dark:bg-slate-800 text-slate-500 hover:text-blue-500 border border-slate-200 dark:border-slate-700"
+                    title="Copy code"
                   >
-                    {copiedCode ? (
-                      <Check className="w-5 h-5 text-[#25C993]" />
-                    ) : (
-                      <Copy className="w-5 h-5 text-[#B2C1B8]" />
-                    )}
+                    {copiedCode ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                   </button>
                 </div>
 
-                <div className="bg-[#1E2B25]/80 p-3.5 rounded-2xl border border-[#2D3D35] text-left text-xs text-[#B2C1B8] space-y-2">
-                  <div className="font-semibold text-white">How to connect on your phone:</div>
-                  <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
-                    <li>Open WhatsApp on your mobile phone</li>
-                    <li>Tap <strong>Settings</strong> (iOS) or <strong>⋮ More options</strong> (Android) &gt; <strong>Linked Devices</strong></li>
-                    <li>Tap <strong>Link a Device</strong> &gt; <strong>Link with phone number instead</strong></li>
-                    <li>Enter the code <strong className="font-mono text-[#25C993]">{phonePairingCode}</strong></li>
-                  </ol>
-                </div>
-
-                <div className="flex items-center justify-center gap-2 pt-1 text-xs text-[#25C993] font-medium">
-                  <span className="w-2 h-2 rounded-full bg-[#25C993] animate-ping" />
-                  <span>Waiting for your phone to confirm connection...</span>
+                <div className="text-xs text-slate-400 flex items-center justify-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Expires in {phoneSecondsLeft}s</span>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setPhonePairingStep('input');
-                    setPhonePairingError(null);
-                    setPhoneLinkStatus('idle');
-                  }}
-                  className="text-xs text-[#8A9A91] hover:text-white hover:underline pt-1 block mx-auto cursor-pointer"
+                  onClick={() => setPhonePairingStep('input')}
+                  className="text-xs text-blue-500 hover:underline font-semibold"
                 >
-                  Change phone number
+                  Use a different phone number
                 </button>
               </div>
             )}
           </div>
         </div>
       )}
-
-      {/* Footer spacer */}
-      <footer className="w-full text-center text-[11px] text-[#788980] dark:text-[#8A9A91] pt-4">
-        © {new Date().getFullYear()} Aroon Kumar. All rights reserved.
-      </footer>
     </div>
   );
 };
