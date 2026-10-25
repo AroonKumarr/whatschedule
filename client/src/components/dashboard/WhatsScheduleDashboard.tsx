@@ -13,6 +13,7 @@ import { AnalyticsView } from '../AnalyticsView';
 import { LandingPageView } from '../LandingPageView';
 import { OverviewHomeView } from './OverviewHomeView';
 import { CreatePostView } from './CreatePostView';
+import { TopSearchNavbar } from './TopSearchNavbar';
 import {
   Clock,
   Calendar as CalendarIcon,
@@ -310,10 +311,10 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
   };
 
   return (
-    <div className="w-screen h-screen overflow-hidden flex bg-[#0B0F0D] text-[#E9EDEF] select-none font-sans">
+    <div className="w-screen h-screen overflow-hidden flex bg-[#F4F7FB] dark:bg-[#09121B] text-slate-900 dark:text-slate-100 select-none font-sans transition-colors">
       
       {/* ========================================================= */}
-      {/* ZONE 1: LEFT NAV RAIL (220px desktop, 68px tablet)        */}
+      {/* ZONE 1: LEFT NAV RAIL (230px desktop, 72px tablet)        */}
       {/* ========================================================= */}
       <div className="hidden md:flex shrink-0 h-full">
         <NavRail
@@ -327,20 +328,32 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
       </div>
 
       {/* ========================================================= */}
-      {/* MAIN VIEW AREA                                            */}
+      {/* MAIN CONTENT AREA WITH TOP SEARCH NAVBAR                  */}
       {/* ========================================================= */}
-      {activeNav === 'home' ? (
-        <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
-          <OverviewHomeView
-            stats={stats}
-            schedules={schedules}
-            contacts={contacts}
-            status={status}
-            onOpenCreatePost={() => setActiveNav('create')}
-            onNavigateTab={(tab) => setActiveNav(tab)}
-          />
-        </div>
-      ) : activeNav === 'create' ? (
+      <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
+        {/* Top Search & Profile Bar matching Mockup */}
+        <TopSearchNavbar
+          themeMode={themeMode}
+          onToggleTheme={onToggleTheme}
+          onOpenSettings={onOpenSettings}
+          userName={status.user?.name || 'Aroon Kumar'}
+          userRole="Creator"
+        />
+
+        {/* View Router */}
+        <div className="flex-1 h-full min-h-0 flex flex-col overflow-hidden">
+          {activeNav === 'home' ? (
+            <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
+              <OverviewHomeView
+                stats={stats}
+                schedules={schedules}
+                contacts={contacts}
+                status={status}
+                onOpenCreatePost={() => setActiveNav('create')}
+                onNavigateTab={(tab) => setActiveNav(tab)}
+              />
+            </div>
+          ) : activeNav === 'create' ? (
         <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
           <CreatePostView
             contacts={contacts}
@@ -650,6 +663,8 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
         </>
       )}
 
+        </div>
+      </div>
     </div>
   );
 };

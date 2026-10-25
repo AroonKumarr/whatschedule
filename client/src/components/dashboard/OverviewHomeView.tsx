@@ -38,10 +38,10 @@ export const OverviewHomeView: React.FC<OverviewHomeViewProps> = ({
   const recentActivities = schedules.slice(0, 5);
 
   return (
-    <div className="flex-1 h-full overflow-y-auto bg-[#F8FAFC] dark:bg-[#0B1319] p-4 sm:p-6 lg:p-8 space-y-6 text-slate-800 dark:text-slate-100">
+    <div className="flex-1 h-full overflow-y-auto bg-[#F4F7FB] dark:bg-[#09121B] p-4 sm:p-6 lg:p-8 space-y-6 text-slate-800 dark:text-slate-100 transition-colors">
       
       {/* Top Hero Banner — "One App. All Your Social Media. Scheduled." */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-100 via-indigo-50 to-pink-50 dark:from-[#1E1B4B]/40 dark:via-[#1E293B] dark:to-[#311042]/30 border border-indigo-100 dark:border-indigo-950/60 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-100 via-indigo-50 to-pink-50 dark:from-[#1E1B4B]/40 dark:via-[#162232] dark:to-[#311042]/30 border border-indigo-100 dark:border-indigo-950/60 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs">
         <div className="space-y-2.5 max-w-xl text-center md:text-left">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/80 dark:bg-slate-800/80 border border-indigo-200/50 dark:border-indigo-800/40 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
             <Sparkles className="w-3.5 h-3.5" />
@@ -74,7 +74,7 @@ export const OverviewHomeView: React.FC<OverviewHomeViewProps> = ({
       {/* 4 Metric Cards Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Posts */}
-        <div className="bg-white dark:bg-[#15222E] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-2">
+        <div className="bg-white dark:bg-[#0E1A26] border border-slate-200/80 dark:border-[#1E2D3D] rounded-2xl p-4 sm:p-5 shadow-2xs space-y-2">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
             <span>Total Posts</span>
             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full font-bold">
@@ -90,7 +90,7 @@ export const OverviewHomeView: React.FC<OverviewHomeViewProps> = ({
         </div>
 
         {/* Scheduled Posts */}
-        <div className="bg-white dark:bg-[#15222E] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-2">
+        <div className="bg-white dark:bg-[#0E1A26] border border-slate-200/80 dark:border-[#1E2D3D] rounded-2xl p-4 sm:p-5 shadow-2xs space-y-2">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
             <span>Scheduled Posts</span>
             <span className="text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-full font-bold">
@@ -106,7 +106,7 @@ export const OverviewHomeView: React.FC<OverviewHomeViewProps> = ({
         </div>
 
         {/* Total Reach */}
-        <div className="bg-white dark:bg-[#15222E] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-2">
+        <div className="bg-white dark:bg-[#0E1A26] border border-slate-200/80 dark:border-[#1E2D3D] rounded-2xl p-4 sm:p-5 shadow-2xs space-y-2">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
             <span>Total Reach</span>
             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full font-bold">
@@ -122,7 +122,7 @@ export const OverviewHomeView: React.FC<OverviewHomeViewProps> = ({
         </div>
 
         {/* Engagement */}
-        <div className="bg-white dark:bg-[#15222E] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-2">
+        <div className="bg-white dark:bg-[#0E1A26] border border-slate-200/80 dark:border-[#1E2D3D] rounded-2xl p-4 sm:p-5 shadow-2xs space-y-2">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
             <span>Engagement</span>
             <span className="text-[10px] text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 px-2 py-0.5 rounded-full font-bold">
@@ -138,12 +138,12 @@ export const OverviewHomeView: React.FC<OverviewHomeViewProps> = ({
         </div>
       </div>
 
-      {/* Main Grid: Upcoming Posts (Left 2 cols) & Right Column (Actions, Connected & Calendar) */}
+      {/* Main Grid: Upcoming Posts (Left 2 cols) & Right Column (Actions & Activity) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left 2 Cols: Upcoming Posts */}
+        {/* Left 2 Cols: Upcoming Posts & Content Calendar Preview */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-[#15222E] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-2xs">
+          <div className="bg-white dark:bg-[#0E1A26] border border-slate-200/80 dark:border-[#1E2D3D] rounded-2xl p-5 shadow-2xs">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-emerald-500" />
@@ -212,7 +212,7 @@ export const OverviewHomeView: React.FC<OverviewHomeViewProps> = ({
           </div>
 
           {/* Connected Platforms Bar */}
-          <div className="bg-white dark:bg-[#15222E] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-2xs">
+          <div className="bg-white dark:bg-[#0E1A26] border border-slate-200/80 dark:border-[#1E2D3D] rounded-2xl p-5 shadow-2xs">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                 <Share2 className="w-4 h-4 text-blue-500" />
@@ -251,7 +251,7 @@ export const OverviewHomeView: React.FC<OverviewHomeViewProps> = ({
         {/* Right Col: Quick Actions & Recent Activity */}
         <div className="space-y-6">
           {/* Quick Actions Card */}
-          <div className="bg-white dark:bg-[#15222E] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-2xs space-y-3">
+          <div className="bg-white dark:bg-[#0E1A26] border border-slate-200/80 dark:border-[#1E2D3D] rounded-2xl p-5 shadow-2xs space-y-3">
             <h3 className="font-bold text-xs uppercase tracking-wider text-slate-400">
               Quick Actions
             </h3>
@@ -307,7 +307,7 @@ export const OverviewHomeView: React.FC<OverviewHomeViewProps> = ({
           </div>
 
           {/* Recent Activity Mini List */}
-          <div className="bg-white dark:bg-[#15222E] border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-2xs space-y-3">
+          <div className="bg-white dark:bg-[#0E1A26] border border-slate-200/80 dark:border-[#1E2D3D] rounded-2xl p-5 shadow-2xs space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-sm text-slate-900 dark:text-white">
                 Recent Activity
