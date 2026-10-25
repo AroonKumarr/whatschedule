@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { Contact } from '../types';
 import {
   X,
-  Calendar,
   Clock,
   Video,
   FileText,
   Upload,
   User,
   Phone,
-  Sparkles,
+  Search,
   Check,
+  Calendar,
+  Sparkles,
 } from 'lucide-react';
 import { addMinutes, addHours, setHours, setMinutes, addDays, format } from 'date-fns';
 
@@ -43,13 +44,19 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const [contactMode, setContactMode] = useState<'direct' | 'contacts'>('direct');
+  const [contactMode, setContactMode] = useState<'contacts' | 'direct'>(
+    contacts.length > 0 ? 'contacts' : 'direct'
+  );
+  const [contactSearch, setContactSearch] = useState('');
+  const [selectedContactJid, setSelectedContactJid] = useState(
+    contacts.length > 0 ? contacts[0].id : ''
+  );
+
   const [countryCode, setCountryCode] = useState('+91');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [recipientName, setRecipientName] = useState('');
-  const [selectedContactJid, setSelectedContactJid] = useState('');
 
-  // Default schedule: Tomorrow 9:00 AM (as requested in the prompt)
+  // Default: Tomorrow at 9:00 AM
   const defaultTomorrow9am = format(
     setMinutes(setHours(addDays(new Date(), 1), 9), 0),
     "yyyy-MM-dd'T'HH:mm"
@@ -60,7 +67,12 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Preset Date-Time Handlers
+  const filteredContacts = contacts.filter((c) => {
+    if (!contactSearch.trim()) return true;
+    const q = contactSearch.toLowerCase();
+    return (c.name && c.name.toLowerCase().includes(q)) || c.number.includes(q);
+  });
+
   const applyPreset = (preset: '15m' | '1h' | 'tomorrow9am' | 'tomorrow9pm') => {
     const now = new Date();
     let target = now;
@@ -104,12 +116,12 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
     }
 
     if (!scheduledAt) {
-      setError('Please pick a date and time for the schedule');
+      setError('Please choose a date and time for the message');
       return;
     }
 
     if (!content.trim() && !selectedFile) {
-      setError('Please enter a message or attach a media file / document');
+      setError('Please type a message or attach a file');
       return;
     }
 
@@ -134,53 +146,44 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#202c33] border border-[#2a3942] rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-[#e9edef]">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 select-none">
+      {/* 100% WhatsApp Dark Container (Zero White Popups) */}
+      <div className="bg-[#202c33] border border-[#2a3942] rounded-2xl w-full max-w-xl shadow-2xl flex flex-col max-h-[94vh] overflow-hidden text-[#e9edef]">
+        
         {/* Header */}
-        <div className="px-6 py-4 bg-[#111b21] border-b border-[#2a3942] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-[#00a884]/20 rounded-lg text-[#00a884]">
+        <div className="px-6 py-4 bg-[#111b21] border-b border-[#222d34] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[#00a884]/20 rounded-xl text-[#00a884]">
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-[#e9edef]">New WhatsApp Schedule</h3>
-              <p className="text-xs text-[#8696a0]">Dispatches automatically in background</p>
+              <h3 className="text-base font-semibold text-[#e9edef]">Schedule Message / Media</h3>
+              <p className="text-xs text-[#8696a0]">Dispatches automatically in the background</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-[#8696a0] hover:text-[#e9edef] rounded-full hover:bg-[#202c33] transition-colors"
+            className="p-2 text-[#8696a0] hover:text-[#e9edef] rounded-full hover:bg-[#202c33] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
           {error && (
-            <div className="p-3 bg-[#ea4335]/15 border border-[#ea4335]/30 rounded-lg text-xs text-[#ea4335]">
+            <div className="p-3 bg-[#ea4335]/15 border border-[#ea4335]/30 rounded-xl text-xs text-[#ea4335]">
               {error}
             </div>
           )}
 
-          {/* Contact Input Selector */}
+          {/* Contact Selector (Contacts at Top for 1-Tap Ease) */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-[#8696a0]">
-                Recipient Contact
+                Select Recipient
               </label>
-              <div className="flex rounded-lg bg-[#111b21] p-0.5 border border-[#2a3942] text-[11px]">
-                <button
-                  type="button"
-                  onClick={() => setContactMode('direct')}
-                  className={`px-3 py-1 rounded-md transition-colors ${
-                    contactMode === 'direct'
-                      ? 'bg-[#00a884] text-white font-medium'
-                      : 'text-[#8696a0] hover:text-white'
-                  }`}
-                >
-                  Direct Number
-                </button>
+              <div className="flex rounded-lg bg-[#111b21] p-0.5 border border-[#2a3942] text-xs">
                 <button
                   type="button"
                   onClick={() => setContactMode('contacts')}
@@ -190,18 +193,79 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
                       : 'text-[#8696a0] hover:text-white'
                   }`}
                 >
-                  Saved Contacts ({contacts.length})
+                  WhatsApp Contacts ({contacts.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setContactMode('direct')}
+                  className={`px-3 py-1 rounded-md transition-colors ${
+                    contactMode === 'direct'
+                      ? 'bg-[#00a884] text-white font-medium'
+                      : 'text-[#8696a0] hover:text-white'
+                  }`}
+                >
+                  Enter Phone Number
                 </button>
               </div>
             </div>
 
-            {contactMode === 'direct' ? (
+            {contactMode === 'contacts' ? (
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-[#8696a0] absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    placeholder="Search synced contacts by name or number..."
+                    value={contactSearch}
+                    onChange={(e) => setContactSearch(e.target.value)}
+                    className="w-full bg-[#111b21] border border-[#2a3942] rounded-xl pl-9 pr-3 py-2 text-xs text-[#e9edef] placeholder-[#8696a0] focus:outline-none focus:border-[#00a884]"
+                  />
+                </div>
+
+                {/* Scrollable Contact Picker List */}
+                <div className="max-h-40 overflow-y-auto bg-[#111b21] rounded-xl border border-[#2a3942] divide-y divide-[#222d34]/60">
+                  {filteredContacts.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-[#8696a0]">
+                      {contacts.length === 0
+                        ? 'No contacts synced yet. You can use "Enter Phone Number" tab to message anyone!'
+                        : 'No contacts match your search.'}
+                    </div>
+                  ) : (
+                    filteredContacts.map((c) => {
+                      const isSelected = selectedContactJid === c.id;
+                      return (
+                        <div
+                          key={c.id}
+                          onClick={() => setSelectedContactJid(c.id)}
+                          className={`p-2.5 flex items-center justify-between cursor-pointer transition-colors ${
+                            isSelected ? 'bg-[#005c4b]/50' : 'hover:bg-[#202c33]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 truncate">
+                            <div className="w-8 h-8 rounded-full bg-[#202c33] border border-[#2a3942] flex items-center justify-center text-xs font-bold text-white shrink-0">
+                              {c.name ? c.name.charAt(0).toUpperCase() : '#'}
+                            </div>
+                            <div className="truncate">
+                              <span className="text-xs font-medium text-[#e9edef] block truncate">
+                                {c.name || c.number}
+                              </span>
+                              <span className="text-[10px] text-[#8696a0]">{c.number}</span>
+                            </div>
+                          </div>
+                          {isSelected && <Check className="w-4 h-4 text-[#25D366] shrink-0" />}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            ) : (
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <select
                     value={countryCode}
                     onChange={(e) => setCountryCode(e.target.value)}
-                    className="bg-[#111b21] border border-[#2a3942] rounded-lg px-2.5 py-2 text-xs text-[#e9edef] focus:outline-none focus:border-[#00a884]"
+                    className="bg-[#111b21] border border-[#2a3942] rounded-xl px-2.5 py-2.5 text-xs text-[#e9edef] focus:outline-none focus:border-[#00a884]"
                   >
                     {COUNTRY_CODES.map((c) => (
                       <option key={c.code} value={c.code}>
@@ -210,106 +274,94 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
                     ))}
                   </select>
                   <div className="relative flex-1">
-                    <Phone className="w-4 h-4 text-[#8696a0] absolute left-3 top-2.5" />
+                    <Phone className="w-4 h-4 text-[#8696a0] absolute left-3 top-3" />
                     <input
                       type="tel"
-                      placeholder="e.g. 9876543210 (HR / Manager)"
+                      placeholder="e.g. 9876543210"
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="w-full bg-[#111b21] border border-[#2a3942] rounded-lg pl-9 pr-3 py-2 text-sm text-[#e9edef] placeholder-[#8696a0] focus:outline-none focus:border-[#00a884]"
+                      className="w-full bg-[#111b21] border border-[#2a3942] rounded-xl pl-9 pr-3 py-2.5 text-sm text-[#e9edef] placeholder-[#8696a0] focus:outline-none focus:border-[#00a884]"
                     />
                   </div>
                 </div>
                 <div className="relative">
-                  <User className="w-4 h-4 text-[#8696a0] absolute left-3 top-2.5" />
+                  <User className="w-4 h-4 text-[#8696a0] absolute left-3 top-3" />
                   <input
                     type="text"
-                    placeholder="Contact Name (e.g. HR / Team Lead / Client)"
+                    placeholder="Contact Name (e.g. HR / Manager / Client)"
                     value={recipientName}
                     onChange={(e) => setRecipientName(e.target.value)}
-                    className="w-full bg-[#111b21] border border-[#2a3942] rounded-lg pl-9 pr-3 py-2 text-xs text-[#e9edef] placeholder-[#8696a0] focus:outline-none focus:border-[#00a884]"
+                    className="w-full bg-[#111b21] border border-[#2a3942] rounded-xl pl-9 pr-3 py-2 text-xs text-[#e9edef] placeholder-[#8696a0] focus:outline-none focus:border-[#00a884]"
                   />
                 </div>
               </div>
-            ) : (
-              <select
-                value={selectedContactJid}
-                onChange={(e) => setSelectedContactJid(e.target.value)}
-                className="w-full bg-[#111b21] border border-[#2a3942] rounded-lg p-2.5 text-sm text-[#e9edef] focus:outline-none focus:border-[#00a884]"
-              >
-                <option value="">Select a synced contact...</option>
-                {contacts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name ? `${c.name} (${c.number})` : c.number}
-                  </option>
-                ))}
-              </select>
             )}
           </div>
 
-          {/* Schedule Date & Time */}
+          {/* Schedule Date & Time (Dark styled, no white calendar flash) */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#8696a0] mb-2">
-              Dispatch Time & Date
+              Delivery Date & Time
             </label>
 
-            {/* Quick Preset Buttons */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-2.5 text-xs">
+            {/* Quick 1-Tap Presets */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2.5 text-xs">
               <button
                 type="button"
                 onClick={() => applyPreset('15m')}
-                className="px-2.5 py-1.5 bg-[#111b21] hover:bg-[#2a3942] border border-[#2a3942] rounded-lg text-[#d1d7db] transition-colors"
+                className="py-2 px-3 bg-[#111b21] hover:bg-[#2a3942] border border-[#2a3942] rounded-xl text-[#d1d7db] transition-colors font-medium text-center"
               >
                 +15 Mins
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('1h')}
-                className="px-2.5 py-1.5 bg-[#111b21] hover:bg-[#2a3942] border border-[#2a3942] rounded-lg text-[#d1d7db] transition-colors"
+                className="py-2 px-3 bg-[#111b21] hover:bg-[#2a3942] border border-[#2a3942] rounded-xl text-[#d1d7db] transition-colors font-medium text-center"
               >
                 +1 Hour
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('tomorrow9am')}
-                className="px-2.5 py-1.5 bg-[#00a884]/20 border border-[#00a884]/40 text-[#25D366] font-medium rounded-lg hover:bg-[#00a884]/30 transition-colors"
+                className="py-2 px-3 bg-[#00a884]/20 border border-[#00a884]/50 text-[#25D366] font-semibold rounded-xl hover:bg-[#00a884]/30 transition-colors text-center"
               >
                 Tomorrow 9am
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('tomorrow9pm')}
-                className="px-2.5 py-1.5 bg-[#111b21] hover:bg-[#2a3942] border border-[#2a3942] rounded-lg text-[#d1d7db] transition-colors"
+                className="py-2 px-3 bg-[#111b21] hover:bg-[#2a3942] border border-[#2a3942] rounded-xl text-[#d1d7db] transition-colors font-medium text-center"
               >
                 Tomorrow 9pm
               </button>
             </div>
 
+            {/* Dark Styled Datetime Input */}
             <input
               type="datetime-local"
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
-              className="w-full bg-[#111b21] border border-[#2a3942] rounded-lg p-2.5 text-sm text-[#e9edef] focus:outline-none focus:border-[#00a884]"
+              className="w-full bg-[#111b21] border border-[#2a3942] rounded-xl p-3 text-sm text-[#e9edef] focus:outline-none focus:border-[#00a884] [color-scheme:dark]"
             />
           </div>
 
-          {/* Media & Document Attachment */}
+          {/* Media & Document Attachment (Supports iPhone HEIC, MOV, Audio, PDF) */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#8696a0] mb-2">
-              Attach Media / Document (Optional)
+              Attach Video, Photo or Document (Optional)
             </label>
-            <div className="border-2 border-dashed border-[#2a3942] hover:border-[#00a884]/60 bg-[#111b21] rounded-xl p-4 text-center transition-colors relative">
+            <div className="border-2 border-dashed border-[#2a3942] hover:border-[#00a884]/70 bg-[#111b21] rounded-2xl p-4 text-center transition-colors relative">
               <input
                 type="file"
                 id="media-upload"
                 onChange={handleFileChange}
-                accept="video/*,image/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.zip"
+                accept="video/*,image/*,audio/*,.heic,.heif,.mov,.m4a,.pdf,.doc,.docx,.xls,.xlsx,.zip"
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
               {selectedFile ? (
-                <div className="flex items-center justify-between bg-[#202c33] p-2 rounded-lg text-xs">
-                  <div className="flex items-center gap-2 truncate">
-                    <FileText className="w-4 h-4 text-[#00a884] shrink-0" />
+                <div className="flex items-center justify-between bg-[#202c33] p-3 rounded-xl text-xs">
+                  <div className="flex items-center gap-2.5 truncate">
+                    <FileText className="w-5 h-5 text-[#00a884] shrink-0" />
                     <span className="truncate font-medium">{selectedFile.name}</span>
                     <span className="text-[#8696a0]">
                       ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)
@@ -330,27 +382,27 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
                 <div className="flex flex-col items-center gap-1.5 text-xs text-[#8696a0]">
                   <Upload className="w-6 h-6 text-[#00a884]" />
                   <span>
-                    <strong className="text-[#d1d7db]">Click to upload</strong> or drag & drop
+                    <strong className="text-[#d1d7db]">Tap to upload</strong> or drag & drop files
                   </span>
-                  <span className="text-[10px] text-[#667781]">
-                    HD Videos (.mp4, .mov), Photos (.jpg, .png), Documents (.pdf, .docx)
+                  <span className="text-[11px] text-[#8696a0]">
+                    iPhone Photos (.heic, .png), HD Videos (.mov, .mp4), Voice Memos (.m4a), Documents (.pdf)
                   </span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Message Text / Caption */}
+          {/* Message Content */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#8696a0] mb-2">
-              Message Content / Media Caption
+              Message Text / Caption
             </label>
             <textarea
               rows={4}
-              placeholder="e.g. Good morning! Following up regarding the salary slip update as discussed..."
+              placeholder="Type your scheduled message here..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full bg-[#111b21] border border-[#2a3942] rounded-lg p-3 text-sm text-[#e9edef] placeholder-[#8696a0] focus:outline-none focus:border-[#00a884] resize-none"
+              className="w-full bg-[#111b21] border border-[#2a3942] rounded-xl p-3 text-sm text-[#e9edef] placeholder-[#8696a0] focus:outline-none focus:border-[#00a884] resize-none"
             />
           </div>
 
@@ -359,10 +411,10 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 bg-[#00a884] hover:bg-[#02bd94] disabled:opacity-50 text-white font-medium rounded-xl text-sm transition-transform active:scale-[0.99] shadow-lg flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-[#00a884] hover:bg-[#02bd94] disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-transform active:scale-[0.99] shadow-lg flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
-                <span>Scheduling in SQLite Queue...</span>
+                <span>Scheduling in Local Queue...</span>
               ) : (
                 <>
                   <Clock className="w-4 h-4" />

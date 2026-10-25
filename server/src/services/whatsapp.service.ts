@@ -25,6 +25,7 @@ export interface WhatsAppStatus {
 class WhatsAppService {
   private sock: WASocket | null = null;
   private statusListeners: ((status: WhatsAppStatus) => void)[] = [];
+  private receiptListeners: (() => void)[] = [];
   private authDir: string;
   private qrRaw: string | null = null;
   private qrCodeUrl: string | null = null;
@@ -48,6 +49,13 @@ class WhatsAppService {
     };
   }
 
+  public subscribeReceipts(listener: () => void) {
+    this.receiptListeners.push(listener);
+    return () => {
+      this.receiptListeners = this.receiptListeners.filter((l) => l !== listener);
+    };
+  }
+
   private notifyStatus() {
     const status = this.getStatus();
     this.statusListeners.forEach((l) => {
@@ -56,6 +64,14 @@ class WhatsAppService {
       } catch (err) {
         console.error('Error in status listener:', err);
       }
+    });
+  }
+
+  private notifyReceipts() {
+    this.receiptListeners.forEach((l) => {
+      try {
+        l();
+      } catch (err) {}
     });
   }
 
@@ -84,16 +100,18 @@ class WhatsAppService {
       this.sock = makeWASocket({
         version,
         logger,
-        printQRInTerminal: true,
+        printQRInTerminal: false,
         auth: state,
         browser: ['WhatsSchedule', 'Desktop', '1.0.0'],
-        syncFullHistory: false,
+        syncFullHistory: false, // Privacy protection: Do not download historical chats
         connectTimeoutMs: 60000,
-        keepAliveIntervalMs: 30000,
+        keepAliveIntervalMs: 25000,
+        generateHighQualityLinkPreview: true,
       });
 
       this.sock.ev.on('creds.update', saveCreds);
 
+      // Listen for WhatsApp connection state
       this.sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
@@ -159,7 +177,54 @@ class WhatsAppService {
         }
       });
 
-      // Sync and store contacts
+      // Track Real Delivery & Read Receipts (Single Tick -> Double Grey Tick -> Double Blue Tick)
+      this.sock.ev.on('messages.update', async (updates) => {
+        for (const update of updates) {
+          const waId = update.key.id;
+          if (!waId) continue;
+
+          // Baileys update status codes:
+          // 3: SERVER_ACK (sent / single tick)
+          // 4: DELIVERY_ACK (delivered to recipient phone / double grey tick)
+          // 5: READ (opened and read by recipient / double blue tick)
+          // 6: PLAYED (audio listened / media played)
+          const numStatus = Number(update.update.status);
+
+          let newDeliveryStatus: 'sent' | 'delivered' | 'read' | null = null;
+          if (numStatus === 3) newDeliveryStatus = 'sent';
+          else if (numStatus === 4) newDeliveryStatus = 'delivered';
+          else if (numStatus >= 5) newDeliveryStatus = 'read';
+
+          if (newDeliveryStatus) {
+            try {
+              const matched = await prisma.scheduledMessage.findFirst({
+                where: { waMessageId: waId },
+              });
+
+              if (matched) {
+                const dataToUpdate: any = { deliveryStatus: newDeliveryStatus };
+                if (newDeliveryStatus === 'delivered' && !matched.deliveredAt) {
+                  dataToUpdate.deliveredAt = new Date();
+                }
+                if (newDeliveryStatus === 'read' && !matched.readAt) {
+                  dataToUpdate.readAt = new Date();
+                }
+
+                await prisma.scheduledMessage.update({
+                  where: { id: matched.id },
+                  data: dataToUpdate,
+                });
+
+                this.notifyReceipts();
+              }
+            } catch (err) {
+              // Ignore receipt lookup errors
+            }
+          }
+        }
+      });
+
+      // Sync and store contacts into SQLite automatically
       this.sock.ev.on('contacts.upsert', async (contacts) => {
         for (const contact of contacts) {
           if (contact.id && !contact.id.includes('@g.us')) {
@@ -177,12 +242,34 @@ class WhatsAppService {
                   name: name,
                 },
               });
-            } catch (err) {
-              // Ignore contact upsert lock error
-            }
+            } catch (err) {}
           }
         }
       });
+
+      // Sync contacts from chat list as well
+      this.sock.ev.on('chats.upsert', async (chats) => {
+        for (const chat of chats) {
+          if (chat.id && !chat.id.includes('@g.us')) {
+            const rawNumber = chat.id.split('@')[0];
+            const name = chat.name || rawNumber;
+            try {
+              await prisma.contact.upsert({
+                where: { id: chat.id },
+                create: {
+                  id: chat.id,
+                  number: rawNumber,
+                  name: name,
+                },
+                update: {
+                  name: name,
+                },
+              });
+            } catch (err) {}
+          }
+        }
+      });
+
     } catch (err) {
       console.error('Error during WhatsApp socket initialization:', err);
       this.state = 'error';
@@ -199,28 +286,36 @@ class WhatsAppService {
     return `${cleaned}@s.whatsapp.net`;
   }
 
-  public async sendTextMessage(to: string, content: string): Promise<any> {
+  /**
+   * Anti-ban delay with natural jitter: Simulates human typing behavior
+   */
+  private async applyHumanEmulation(jid: string, isMedia: boolean = false): Promise<void> {
+    if (!this.sock) return;
+
+    // Random delay between 1400ms and 3200ms
+    const delay = Math.floor(Math.random() * (3200 - 1400 + 1)) + 1400;
+
+    try {
+      await this.sock.sendPresenceUpdate(isMedia ? 'recording' : 'composing', jid);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      await this.sock.sendPresenceUpdate('paused', jid);
+    } catch (e) {
+      // Ignore presence update error if contact not yet synced
+    }
+  }
+
+  public async sendTextMessage(to: string, content: string): Promise<{ keyId?: string }> {
     if (!this.sock || this.state !== 'connected') {
       throw new Error('WhatsApp is not connected. Please scan the QR code first.');
     }
 
     const jid = this.formatJid(to);
 
-    // Human typing emulation (1.2 second typing indicator)
-    try {
-      await this.sock.sendPresenceUpdate('composing', jid);
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-    } catch (e) {
-      // Ignore presence update error if JID is not yet synced
-    }
+    // Apply human typing simulation (Anti-ban safety)
+    await this.applyHumanEmulation(jid, false);
 
     const result = await this.sock.sendMessage(jid, { text: content });
-
-    try {
-      await this.sock.sendPresenceUpdate('paused', jid);
-    } catch (e) {}
-
-    return result;
+    return { keyId: result?.key?.id || undefined };
   }
 
   public async sendMediaMessage(
@@ -229,7 +324,7 @@ class WhatsAppService {
     mimeType: string,
     caption?: string,
     fileName?: string
-  ): Promise<any> {
+  ): Promise<{ keyId?: string }> {
     if (!this.sock || this.state !== 'connected') {
       throw new Error('WhatsApp is not connected. Please scan the QR code first.');
     }
@@ -240,11 +335,10 @@ class WhatsAppService {
 
     const jid = this.formatJid(to);
     const fileBuffer = fs.readFileSync(filePath);
+    const isAudio = mimeType.startsWith('audio/');
 
-    try {
-      await this.sock.sendPresenceUpdate('composing', jid);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    } catch (e) {}
+    // Anti-ban simulation
+    await this.applyHumanEmulation(jid, isAudio);
 
     let result;
     if (mimeType.startsWith('image/')) {
@@ -253,17 +347,17 @@ class WhatsAppService {
         caption: caption || undefined,
         mimetype: mimeType,
       });
-    } else if (mimeType.startsWith('video/')) {
+    } else if (mimeType.startsWith('video/') || mimeType === 'video/quicktime') {
       result = await this.sock.sendMessage(jid, {
         video: fileBuffer,
         caption: caption || undefined,
         mimetype: mimeType,
       });
-    } else if (mimeType.startsWith('audio/')) {
+    } else if (isAudio) {
       result = await this.sock.sendMessage(jid, {
         audio: fileBuffer,
         mimetype: mimeType,
-        ptt: false, // voice message
+        ptt: false, // voice memo
       });
     } else {
       // Document (PDF, docx, etc.)
@@ -275,11 +369,7 @@ class WhatsAppService {
       });
     }
 
-    try {
-      await this.sock.sendPresenceUpdate('paused', jid);
-    } catch (e) {}
-
-    return result;
+    return { keyId: result?.key?.id || undefined };
   }
 
   public async logout(): Promise<void> {
@@ -303,7 +393,6 @@ class WhatsAppService {
     this.isInitializing = false;
     this.notifyStatus();
 
-    // Restart socket to generate new QR
     await this.initialize();
   }
 }

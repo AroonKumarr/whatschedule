@@ -8,26 +8,30 @@ datasource db {
 }
 
 model ScheduledMessage {
-  id            String    @id @default(uuid())
-  recipient     String    // Phone number or JID e.g. 15551234567 or 15551234567@s.whatsapp.net
-  recipientName String?   // Optional friendly contact name e.g. "HR Manager"
-  content       String?   // Message text body or media caption
-  type          String    @default("text") // text, image, video, document, audio
-  mediaPath     String?   // Absolute or relative path to stored media
-  mediaMimeType String?   // e.g. "video/mp4", "image/png", "application/pdf"
-  mediaFileName String?   // e.g. "salary_slip.pdf", "presentation.mp4"
-  scheduledAt   DateTime  // Exact scheduled execution timestamp (UTC)
-  status        String    @default("pending") // pending, processing, sent, failed, cancelled
-  error         String?   // Error log if dispatch failed
-  sentAt        DateTime? // Timestamp when confirmed sent
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(uuid())
+  waMessageId    String?   // WhatsApp protocol message ID (key.id) for receipt tracking
+  recipient      String    // Phone number or JID e.g. 15551234567@s.whatsapp.net
+  recipientName  String?   // Friendly contact name e.g. "HR Manager"
+  content        String?   // Message text body or media caption
+  type           String    @default("text") // text, image, video, document, audio
+  mediaPath      String?   // Absolute or relative path to stored media
+  mediaMimeType  String?   // e.g. "video/mp4", "video/quicktime", "image/heic", "image/png"
+  mediaFileName  String?   // Original uploaded file name
+  scheduledAt    DateTime  // Scheduled dispatch timestamp (UTC)
+  status         String    @default("pending") // pending, processing, sent, failed, cancelled
+  deliveryStatus String    @default("pending") // pending, sent (single tick), delivered (double tick), read (blue tick)
+  error          String?   // Error log if dispatch failed
+  sentAt         DateTime? // Timestamp when dispatched
+  deliveredAt    DateTime? // Timestamp when delivered to recipient phone
+  readAt         DateTime? // Timestamp when recipient opened/read the message
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Contact {
-  id              String    @id // JID or sanitized phone number
-  name            String?
-  number          String
+  id              String    @id // JID e.g. 15551234567@s.whatsapp.net
+  name            String?   // Saved or WhatsApp notify name
+  number          String    // Clean phone number
   avatarUrl       String?
   lastContactedAt DateTime?
   createdAt       DateTime  @default(now())

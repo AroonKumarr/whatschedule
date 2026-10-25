@@ -66,9 +66,16 @@ wss.on('connection', (ws: WebSocket) => {
     }
   });
 
+  const unsubscribeReceipts = whatsAppService.subscribeReceipts(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'QUEUE_UPDATE' }));
+    }
+  });
+
   ws.on('close', () => {
     unsubscribeStatus();
     unsubscribeQueue();
+    unsubscribeReceipts();
   });
 });
 

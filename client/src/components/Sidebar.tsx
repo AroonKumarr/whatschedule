@@ -261,9 +261,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {/* Status Icons */}
                     <div className="flex items-center gap-1.5 shrink-0">
                       {item.status === 'sent' && (
-                        <span title="Sent">
-                          <CheckCheck className="w-4 h-4 text-[#53bdeb]" />
-                        </span>
+                        <>
+                          {item.deliveryStatus === 'read' ? (
+                            <span title="Read (Seen)">
+                              <CheckCheck className="w-4 h-4 text-[#53bdeb]" />
+                            </span>
+                          ) : item.deliveryStatus === 'delivered' ? (
+                            <span title="Delivered to phone">
+                              <CheckCheck className="w-4 h-4 text-[#8696a0]" />
+                            </span>
+                          ) : (
+                            <span title="Sent to server">
+                              <CheckCheck className="w-4 h-4 text-[#8696a0]" />
+                            </span>
+                          )}
+                        </>
                       )}
                       {item.status === 'pending' && (
                         <span title="Pending">

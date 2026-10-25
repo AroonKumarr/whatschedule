@@ -1,5 +1,6 @@
 export interface ScheduledMessage {
   id: string;
+  waMessageId?: string | null;
   recipient: string;
   recipientName?: string | null;
   content?: string | null;
@@ -9,8 +10,11 @@ export interface ScheduledMessage {
   mediaFileName?: string | null;
   scheduledAt: string;
   status: 'pending' | 'processing' | 'sent' | 'failed' | 'cancelled';
+  deliveryStatus?: 'pending' | 'sent' | 'delivered' | 'read';
   error?: string | null;
   sentAt?: string | null;
+  deliveredAt?: string | null;
+  readAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

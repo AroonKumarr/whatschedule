@@ -13,7 +13,7 @@ const storage = multer.diskStorage({
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
+    const ext = path.extname(file.originalname).toLowerCase();
     const uniqueName = `${Date.now()}-${uuidv4()}${ext}`;
     cb(null, uniqueName);
   },
@@ -22,13 +22,47 @@ const storage = multer.diskStorage({
 export const upload = multer({
   storage,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB max for HD videos and docs
+    fileSize: 150 * 1024 * 1024, // 150MB max for HD 4K iPhone videos and large documents
   },
 });
 
-export function detectMediaType(mimeType: string): 'image' | 'video' | 'audio' | 'document' {
-  if (mimeType.startsWith('image/')) return 'image';
-  if (mimeType.startsWith('video/')) return 'video';
-  if (mimeType.startsWith('audio/')) return 'audio';
+/**
+ * Detect media type including native iOS/iPhone formats:
+ * - Images: JPEG, PNG, WEBP, GIF, HEIC, HEIF
+ * - Videos: MP4, MOV (Apple QuickTime), MKV, AVI, WEBM
+ * - Audio: M4A (Apple Voice Memo), MP3, OGG, WAV, AAC
+ * - Documents: PDF, DOCX, XLSX, PPTX, TXT, ZIP
+ */
+export function detectMediaType(mimeType: string, filename?: string): 'image' | 'video' | 'audio' | 'document' {
+  const mime = (mimeType || '').toLowerCase();
+  const ext = filename ? path.extname(filename).toLowerCase() : '';
+
+  // Images
+  if (
+    mime.startsWith('image/') ||
+    ['.heic', '.heif', '.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(ext)
+  ) {
+    return 'image';
+  }
+
+  // Videos (including iPhone .mov QuickTime)
+  if (
+    mime.startsWith('video/') ||
+    mime === 'video/quicktime' ||
+    ['.mov', '.mp4', '.mkv', '.webm', '.m4v'].includes(ext)
+  ) {
+    return 'video';
+  }
+
+  // Audio (including Apple .m4a Voice Memos)
+  if (
+    mime.startsWith('audio/') ||
+    mime === 'audio/x-m4a' ||
+    mime === 'audio/m4a' ||
+    ['.m4a', '.mp3', '.ogg', '.wav', '.aac'].includes(ext)
+  ) {
+    return 'audio';
+  }
+
   return 'document';
 }

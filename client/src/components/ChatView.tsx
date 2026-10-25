@@ -5,6 +5,7 @@ import {
   Trash2,
   RotateCcw,
   Clock,
+  Check,
   CheckCheck,
   AlertCircle,
   FileText,
@@ -12,6 +13,8 @@ import {
   Calendar,
   Smartphone,
   Info,
+  Play,
+  Volume2,
 } from 'lucide-react';
 import { format, formatDistanceToNow, isPast } from 'date-fns';
 
@@ -37,10 +40,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <Calendar className="w-8 h-8" />
         </div>
         <h2 className="text-2xl font-light text-[#e9edef] mb-2">
-          WhatsSchedule for Web & Desktop
+          WhatsSchedule for Web & Mobile
         </h2>
         <p className="text-sm text-[#8696a0] max-w-md mb-6 leading-relaxed">
-          Select a scheduled message from the sidebar to inspect its payload, or compose a new automated schedule for text, videos, or documents.
+          Select a scheduled dispatch from the sidebar to inspect its payload, or schedule a new automated message, video, or voice note.
         </p>
         <button
           onClick={onOpenComposer}
@@ -51,7 +54,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
         <div className="mt-12 flex items-center gap-2 text-xs text-[#8696a0]">
           <Smartphone className="w-4 h-4 text-[#00a884]" />
-          <span>Independent Multi-Device Automation • No Phone Screen Required</span>
+          <span>Independent Multi-Device Automation • Screen Can Be Off</span>
         </div>
       </div>
     );
@@ -155,35 +158,48 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
         </div>
 
-        {/* Message Bubble (WhatsApp Outgoing Style) */}
+        {/* Message Bubble (WhatsApp Outgoing Style #005c4b) */}
         <div className="flex justify-end">
           <div className="max-w-[85%] md:max-w-[65%] bg-[#005c4b] text-[#e9edef] rounded-lg rounded-tr-none p-3 shadow-md border border-[#005c4b]/80 relative group">
             
-            {/* Render Media Payload if attached */}
+            {/* Render Video (including iPhone QuickTime .mov and .mp4) */}
             {selectedMessage.type === 'video' && mediaUrl && (
-              <div className="mb-2 rounded-lg overflow-hidden bg-black/40 border border-black/20">
+              <div className="mb-2 rounded-lg overflow-hidden bg-black/50 border border-black/20">
                 <video
                   src={mediaUrl}
                   controls
-                  className="w-full max-h-[340px] rounded-lg object-contain bg-black"
+                  className="w-full max-h-[360px] rounded-lg object-contain bg-black"
                 />
-                <div className="px-2 py-1 text-[11px] text-[#8696a0] flex justify-between bg-black/50">
+                <div className="px-2 py-1 text-[11px] text-[#8696a0] flex justify-between bg-black/60">
                   <span className="truncate">{selectedMessage.mediaFileName || 'Video'}</span>
                   <span>{selectedMessage.mediaMimeType}</span>
                 </div>
               </div>
             )}
 
+            {/* Render Image (including iPhone .heic, .webp, .png, .jpg) */}
             {selectedMessage.type === 'image' && mediaUrl && (
               <div className="mb-2 rounded-lg overflow-hidden border border-black/20">
                 <img
                   src={mediaUrl}
-                  alt="Scheduled Attachment"
-                  className="w-full max-h-[340px] object-cover rounded-lg"
+                  alt="Attachment"
+                  className="w-full max-h-[360px] object-cover rounded-lg"
                 />
               </div>
             )}
 
+            {/* Render Audio / Voice Memo */}
+            {selectedMessage.type === 'audio' && mediaUrl && (
+              <div className="mb-2 p-2.5 bg-[#0a332c] rounded-lg border border-[#00a884]/20 flex flex-col gap-1.5">
+                <div className="flex items-center gap-2 text-xs text-white">
+                  <Volume2 className="w-4 h-4 text-[#25D366]" />
+                  <span>Voice Memo / Audio</span>
+                </div>
+                <audio src={mediaUrl} controls className="w-full h-8" />
+              </div>
+            )}
+
+            {/* Render Document */}
             {selectedMessage.type === 'document' && (
               <div className="mb-2 p-3 bg-[#0a332c] rounded-lg flex items-center gap-3 border border-[#00a884]/20">
                 <div className="p-2.5 bg-[#00a884] rounded-lg text-white">
@@ -202,7 +218,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     href={mediaUrl}
                     download={selectedMessage.mediaFileName || 'download'}
                     className="p-2 hover:bg-[#005c4b] rounded-full text-white transition-colors"
-                    title="Download attached document"
+                    title="Download document"
                   >
                     <Download className="w-4 h-4" />
                   </a>
@@ -210,24 +226,50 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </div>
             )}
 
-            {/* Message Text Body */}
+            {/* Message Body Text */}
             {selectedMessage.content && (
-              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words pr-12 text-[#e9edef]">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words pr-14 text-[#e9edef]">
                 {selectedMessage.content}
               </p>
             )}
 
-            {/* Bubble Footer Details */}
-            <div className="flex items-center justify-end gap-1.5 mt-1 select-none text-[10px] text-[#8696a0]">
+            {/* Authentic WhatsApp Delivery & Read Ticks */}
+            <div className="flex items-center justify-end gap-1 mt-1 select-none text-[11px] text-[#8696a0]">
               <span>{format(new Date(selectedMessage.createdAt), 'h:mm a')}</span>
-              {selectedMessage.status === 'sent' && (
-                <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb]" />
+              
+              {/* Double Blue Ticks (Recipient opened and read the message) */}
+              {selectedMessage.deliveryStatus === 'read' && (
+                <span title="Read by recipient">
+                  <CheckCheck className="w-4 h-4 text-[#53bdeb]" />
+                </span>
               )}
+
+              {/* Double Grey Ticks (Delivered to recipient phone) */}
+              {selectedMessage.deliveryStatus === 'delivered' && (
+                <span title="Delivered to phone">
+                  <CheckCheck className="w-4 h-4 text-[#8696a0]" />
+                </span>
+              )}
+
+              {/* Single Grey Tick (Sent to WhatsApp servers) */}
+              {selectedMessage.deliveryStatus === 'sent' && (
+                <span title="Sent from server">
+                  <Check className="w-4 h-4 text-[#8696a0]" />
+                </span>
+              )}
+
+              {/* Pending Clock Icon */}
               {selectedMessage.status === 'pending' && (
-                <Clock className="w-3 h-3 text-[#8696a0]" />
+                <span title="Armed in queue">
+                  <Clock className="w-3 h-3 text-[#8696a0]" />
+                </span>
               )}
+
+              {/* Failed Icon */}
               {selectedMessage.status === 'failed' && (
-                <AlertCircle className="w-3.5 h-3.5 text-[#ea4335]" />
+                <span title="Failed to dispatch">
+                  <AlertCircle className="w-3.5 h-3.5 text-[#ea4335]" />
+                </span>
               )}
             </div>
           </div>
@@ -259,10 +301,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <Info className="w-4 h-4 text-[#00a884]" />
           <span>
             {selectedMessage.status === 'pending'
-              ? 'This message is armed in the persistent SQLite queue and will execute automatically.'
+              ? 'Armed in persistent SQLite queue • Dispatches automatically even if display is asleep.'
+              : selectedMessage.deliveryStatus === 'read'
+              ? `Read by recipient on ${format(new Date(selectedMessage.readAt || selectedMessage.updatedAt), 'MMM d, h:mm a')}`
               : selectedMessage.status === 'sent'
               ? `Delivered on ${format(new Date(selectedMessage.sentAt || selectedMessage.updatedAt), 'MMM d, h:mm a')}`
-              : 'Message execution stopped or cancelled.'}
+              : 'Execution cancelled.'}
           </span>
         </div>
 

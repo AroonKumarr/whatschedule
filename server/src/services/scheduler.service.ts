@@ -84,10 +84,12 @@ class SchedulerService {
         this.notifyUpdate();
 
         try {
+          let dispatchResult: { keyId?: string };
+
           if (msg.type === 'text' || !msg.mediaPath) {
-            await whatsAppService.sendTextMessage(msg.recipient, msg.content || '');
+            dispatchResult = await whatsAppService.sendTextMessage(msg.recipient, msg.content || '');
           } else {
-            await whatsAppService.sendMediaMessage(
+            dispatchResult = await whatsAppService.sendMediaMessage(
               msg.recipient,
               msg.mediaPath,
               msg.mediaMimeType || 'application/octet-stream',
@@ -96,11 +98,13 @@ class SchedulerService {
             );
           }
 
-          // Mark as sent
+          // Mark as sent with receipt tracking ID
           await prisma.scheduledMessage.update({
             where: { id: msg.id },
             data: {
               status: 'sent',
+              deliveryStatus: 'sent',
+              waMessageId: dispatchResult?.keyId || null,
               sentAt: new Date(),
               error: null,
             },
