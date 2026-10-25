@@ -83,8 +83,16 @@ export const NavRail: React.FC<NavRailProps> = ({
       <div className="flex flex-col items-center lg:items-stretch space-y-5">
         
         {/* Brand Header */}
-        <div className="px-1 flex items-center justify-center lg:justify-start">
-          <BrandLogo size={32} />
+        <div className="px-1 flex items-center justify-center lg:justify-start gap-2.5">
+          <BrandLogo size={42} className="shrink-0" />
+          <div className="hidden lg:flex flex-col leading-none">
+            <span className="text-base font-extrabold tracking-tight text-white">
+              Whats<span className="bg-gradient-to-r from-[#00A3FF] via-[#7B61FF] to-[#FF4B91] bg-clip-text text-transparent">Schedule</span>
+            </span>
+            <span className="text-[10px] text-slate-400 font-medium mt-0.5">
+              Scheduling made simple
+            </span>
+          </div>
         </div>
 
         {/* Nav Items List */}

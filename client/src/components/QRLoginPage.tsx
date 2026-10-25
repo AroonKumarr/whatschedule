@@ -199,25 +199,25 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
       {/* 1. TOP HEADER                                             */}
       {/* ========================================================= */}
       <header className="max-w-[1040px] mx-auto w-full flex items-center justify-between z-10 pt-1 pb-4">
-        {/* Brand */}
-        <div className="flex items-center gap-3">
-          <BrandLogo size={38} />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                Whats<span className="text-blue-500 dark:text-blue-400">Schedule</span>
+        {/* Brand matching exact size & proportion from shared screenshot */}
+        <div className="flex items-center gap-3.5">
+          <BrandLogo size={48} className="shrink-0" />
+          <div className="flex flex-col justify-center">
+            <div className="flex items-center gap-2.5 leading-none">
+              <span className="text-xl sm:text-[22px] font-extrabold tracking-tight text-slate-900 dark:text-white">
+                Whats<span className="bg-gradient-to-r from-[#00A3FF] via-[#7B61FF] to-[#FF4B91] bg-clip-text text-transparent">Schedule</span>
               </span>
               <a
                 href="https://github.com/AroonKumarr/whatschedule"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/50 px-2.5 py-0.5 rounded-full border border-cyan-200/60 dark:border-cyan-800/60 hover:opacity-85 transition-opacity"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#00A3FF] dark:text-[#38BDF8] bg-[#00A3FF]/10 dark:bg-[#00A3FF]/15 px-2.5 py-0.5 rounded-full border border-[#00A3FF]/20 dark:border-[#38BDF8]/30 hover:opacity-85 transition-opacity"
               >
                 <span>Open Source</span>
                 <ExternalLink className="w-2.5 h-2.5" />
               </a>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
               Message scheduling, made simple.
             </p>
           </div>
