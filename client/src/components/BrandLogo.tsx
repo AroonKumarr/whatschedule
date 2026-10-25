@@ -145,13 +145,13 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         </g>
 
         {/* Clock Dial Badge (Lower-Right) with Pink/Purple/Cyan Ring */}
-        <g transform="translate(66, 66)">
-          <circle cx="20" cy="20" r="19" fill="url(#wsClockRing)" filter="url(#wsLogoShadow)" />
-          <circle cx="20" cy="20" r="14.5" className="fill-white dark:fill-[#0F172A]" />
+        <g transform="translate(64, 64)">
+          <circle cx="22" cy="22" r="21" fill="url(#wsClockRing)" filter="url(#wsLogoShadow)" />
+          <circle cx="22" cy="22" r="16" className="fill-white dark:fill-[#07131F]" />
           {/* Clock Hands in Cyan/Blue */}
-          <line x1="20" y1="20" x2="20" y2="12" stroke="#1877F2" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="20" y1="20" x2="26" y2="20" stroke="#06B6D4" strokeWidth="2.2" strokeLinecap="round" />
-          <circle cx="20" cy="20" r="1.8" fill="#9333EA" />
+          <line x1="22" y1="22" x2="22" y2="12" stroke="#1877F2" strokeWidth="3" strokeLinecap="round" />
+          <line x1="22" y1="22" x2="29" y2="22" stroke="#00A3FF" strokeWidth="2.8" strokeLinecap="round" />
+          <circle cx="22" cy="22" r="2.2" fill="#E4405F" />
         </g>
       </svg>
     );
