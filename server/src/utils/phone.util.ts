@@ -1,10 +1,12 @@
 /**
  * Normalizes user-entered phone number into standard international format digits (E.164 without leading plus).
  * Smartly handles Pakistan (+92) local prefixes:
+ * - '0300 1234567' -> '923001234567'
  * - '03310390837' -> '923310390837'
- * - '3310390837' (with default CC +92) -> '923310390837'
+ * - '3310390837' (with default CC 92) -> '923310390837'
  * - '+92 331-0390837' -> '923310390837'
  * - '+1 (555) 123-4567' -> '15551234567'
+ * - '9203310390837' -> '923310390837'
  */
 export function normalizePhoneNumber(rawInput: string, defaultCountryCode: string = '92'): string {
   if (!rawInput || typeof rawInput !== 'string') {
@@ -20,32 +22,59 @@ export function normalizePhoneNumber(rawInput: string, defaultCountryCode: strin
     throw new Error('Phone number must contain numeric digits.');
   }
 
-  // Case 1: Raw input started with explicit '+' (e.g. +92331..., +1555...)
+  let normalized: string;
+
   if (hadPlus) {
-    return digits;
-  }
-
-  // Case 2: User started with '0' (e.g. 03310390837 in Pakistan or 07... in UK)
-  if (digits.startsWith('0')) {
+    if (digits.startsWith(`${cleanCc}0`)) {
+      normalized = cleanCc + digits.substring(cleanCc.length + 1);
+    } else {
+      normalized = digits;
+    }
+  } else if (digits.startsWith('0')) {
     const withoutZero = digits.replace(/^0+/, '');
-    return `${cleanCc}${withoutZero}`;
+    normalized = `${cleanCc}${withoutZero}`;
+  } else if (digits.startsWith(`${cleanCc}0`)) {
+    normalized = cleanCc + digits.substring(cleanCc.length + 1);
+  } else if (digits.startsWith(cleanCc) && digits.length >= 10) {
+    normalized = digits;
+  } else if (digits.length === 10) {
+    normalized = `${cleanCc}${digits}`;
+  } else if (digits.length >= 11) {
+    normalized = digits;
+  } else {
+    normalized = `${cleanCc}${digits}`;
   }
 
-  // Case 3: Already starts with default country code (e.g. 92331...)
-  if (digits.startsWith(cleanCc) && digits.length >= 10) {
-    return digits;
+  // E.164 boundary check: standard international numbers are 10 to 15 digits
+  if (normalized.length < 10) {
+    throw new Error(`Phone number "${rawInput}" is too short (${normalized.length} digits). Must be at least 10 digits.`);
   }
 
-  // Case 4: 10-digit number without CC (e.g. 3310390837 for Pakistan or 5551234567 for US)
-  if (digits.length === 10) {
-    return `${cleanCc}${digits}`;
+  if (normalized.length > 15) {
+    throw new Error(`Phone number "${rawInput}" is too long (${normalized.length} digits). Cannot exceed 15 digits.`);
   }
 
-  // If already full international number without plus (>= 11 digits)
-  if (digits.length >= 11) {
-    return digits;
-  }
+  return normalized;
+}
 
-  // Fallback: attach CC
-  return `${cleanCc}${digits}`;
+/**
+ * Masks phone number for security logging (e.g., "92331****837")
+ */
+export function maskPhoneNumber(phone: string): string {
+  if (!phone) return '***';
+  const clean = phone.replace(/\D/g, '');
+  if (clean.length <= 6) return '******';
+  const start = clean.slice(0, 5);
+  const end = clean.slice(-3);
+  return `${start}****${end}`;
+}
+
+/**
+ * Masks pairing code for security logging (e.g., "AB**-**78")
+ */
+export function maskPairingCode(code: string): string {
+  if (!code) return '****';
+  const clean = code.replace(/[^A-Za-z0-9]/g, '');
+  if (clean.length < 4) return '****';
+  return `${clean.slice(0, 2)}**-**${clean.slice(-2)}`;
 }

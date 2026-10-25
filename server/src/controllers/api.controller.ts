@@ -4,6 +4,7 @@ import { schedulerService } from '../services/scheduler.service';
 import { detectMediaType } from '../services/media.service';
 import { authService } from '../services/auth.service';
 import { aiService } from '../services/ai.service';
+import { phoneLinkService } from '../services/phone-link.service';
 import { prisma } from '../database/prisma';
 
 export class ApiController {
@@ -83,29 +84,60 @@ export class ApiController {
     }
   }
 
-  // Request Baileys WhatsApp 8-Character Pairing Code for Phone Number Verification
-  public static async requestPairingCode(req: Request, res: Response) {
+  // Dedicated WhatsApp Phone Number Pairing Endpoints
+  public static async linkPhone(req: Request, res: Response) {
     try {
-      const { phoneNumber, countryCode } = req.body;
-      if (!phoneNumber) {
+      const userId = (req.body.userId || 'default_user').trim();
+      const rawPhone = (req.body.phone || req.body.phoneNumber || '').trim();
+
+      if (!rawPhone) {
         return res.status(400).json({ success: false, error: 'Phone number is required' });
       }
 
-      const rawCode = await whatsAppService.requestPairingCode(phoneNumber, countryCode || '92');
-      const formattedCode =
-        rawCode && rawCode.length === 8 ? `${rawCode.slice(0, 4)}-${rawCode.slice(4)}` : rawCode;
-
+      const result = await phoneLinkService.requestPhoneLink(userId, rawPhone);
       return res.json({
         success: true,
-        data: {
-          code: rawCode,
-          formattedCode,
-        },
+        code: result.code,
+        formattedCode: result.formattedCode,
+        expiresInSec: result.expiresInSec,
+        data: result,
       });
     } catch (err: any) {
-      console.error('[API] Pairing code request error:', err);
-      return res.status(500).json({ success: false, error: err.message || 'Failed to request pairing code' });
+      console.error('[API] Phone linking initiation failed:', err?.message);
+      return res.status(400).json({ success: false, error: err?.message || 'Failed to start phone linking' });
     }
+  }
+
+  public static async getLinkStatus(req: Request, res: Response) {
+    try {
+      const userId = String(req.params.userId || 'default_user').trim();
+      const statusInfo = phoneLinkService.getSessionStatus(userId);
+      return res.json({
+        success: true,
+        status: statusInfo.status,
+        error: statusInfo.error,
+        secondsLeft: statusInfo.secondsLeft,
+        code: statusInfo.code,
+        formattedCode: statusInfo.formattedCode,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message });
+    }
+  }
+
+  public static async cancelLink(req: Request, res: Response) {
+    try {
+      const userId = (req.body.userId || 'default_user').trim();
+      await phoneLinkService.cancel(userId);
+      return res.json({ success: true, message: 'Phone linking attempt cancelled successfully.' });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message });
+    }
+  }
+
+  // Backwards compatibility alias
+  public static async requestPairingCode(req: Request, res: Response) {
+    return ApiController.linkPhone(req, res);
   }
 
   // Contact Creation & Sync

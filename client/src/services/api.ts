@@ -73,20 +73,59 @@ export const api = {
     return data.data;
   },
 
-  async requestPairingCode(phoneNumber: string, countryCode?: string): Promise<{ code: string; formattedCode: string }> {
-    const res = await fetch(`${API_BASE}/auth/pairing-code`, {
+  // Dedicated Phone Linking API
+  async linkPhone(phone: string, userId: string = 'default_user'): Promise<{ code: string; formattedCode: string; expiresInSec: number }> {
+    const res = await fetch(`${API_BASE}/link/phone`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...this.getHeaders(),
       },
-      body: JSON.stringify({ phoneNumber, countryCode }),
+      body: JSON.stringify({ phone, userId }),
     });
     const data = await res.json();
     if (!data.success) {
       throw new Error(data.error || 'Failed to request pairing code');
     }
-    return data.data;
+    return {
+      code: data.code,
+      formattedCode: data.formattedCode || data.code,
+      expiresInSec: data.expiresInSec || 180,
+    };
+  },
+
+  async getLinkStatus(userId: string = 'default_user'): Promise<{
+    status: 'idle' | 'code_ready' | 'connected' | 'expired' | 'error';
+    error: string | null;
+    secondsLeft: number;
+    code?: string | null;
+    formattedCode?: string | null;
+  }> {
+    const res = await fetch(`${API_BASE}/link/status/${encodeURIComponent(userId)}`, {
+      headers: this.getHeaders(),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to fetch link status');
+    }
+    return data;
+  },
+
+  async cancelLink(userId: string = 'default_user'): Promise<void> {
+    await fetch(`${API_BASE}/link/cancel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getHeaders(),
+      },
+      body: JSON.stringify({ userId }),
+    });
+  },
+
+  async requestPairingCode(phoneNumber: string, countryCode?: string): Promise<{ code: string; formattedCode: string }> {
+    const fullNumber = countryCode ? `${countryCode}${phoneNumber}` : phoneNumber;
+    const res = await this.linkPhone(fullNumber);
+    return { code: res.code, formattedCode: res.formattedCode };
   },
 
   async logout(): Promise<void> {

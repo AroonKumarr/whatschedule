@@ -48,6 +48,11 @@ app.post('/api/auth/setup', ApiController.setupPin);
 app.post('/api/auth/unlock', ApiController.unlock);
 app.post('/api/auth/pairing-code', ApiController.requestPairingCode);
 
+// Dedicated WhatsApp Companion Phone Pairing Routes
+app.post('/api/link/phone', ApiController.linkPhone);
+app.get('/api/link/status/:userId', ApiController.getLinkStatus);
+app.post('/api/link/cancel', ApiController.cancelLink);
+
 // Serve uploaded media (protected by file token or internal)
 const uploadsPath = path.resolve(__dirname, '../../uploads');
 app.use('/uploads', express.static(uploadsPath));

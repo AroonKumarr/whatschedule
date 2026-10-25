@@ -46,7 +46,10 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
   const [phonePairingCode, setPhonePairingCode] = useState<string>('');
   const [phonePairingLoading, setPhonePairingLoading] = useState<boolean>(false);
   const [phonePairingError, setPhonePairingError] = useState<string | null>(null);
+  const [phoneLinkStatus, setPhoneLinkStatus] = useState<'idle' | 'code_ready' | 'connected' | 'expired' | 'error'>('idle');
+  const [phoneSecondsLeft, setPhoneSecondsLeft] = useState<number>(180);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
+  const userId = 'local_user';
 
   // Reset countdown whenever a fresh QR code arrives
   useEffect(() => {
@@ -88,24 +91,82 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
       setShowPhonePairing(false);
       setPhonePairingStep('input');
       setPhonePairingCode('');
+      setPhoneLinkStatus('connected');
     }
   }, [status.state]);
 
-  const handlePhonePairingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Live Status Polling (every 2s) & 180s Countdown for Companion Phone Pairing
+  useEffect(() => {
+    if (!showPhonePairing || phonePairingStep !== 'code' || phoneLinkStatus === 'connected') {
+      return;
+    }
+
+    // 1s timer for countdown
+    const secondTimer = setInterval(() => {
+      setPhoneSecondsLeft((prev) => {
+        if (prev <= 1) {
+          setPhoneLinkStatus('expired');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // 2s polling for server status
+    const pollTimer = setInterval(async () => {
+      try {
+        const res = await api.getLinkStatus(userId);
+        if (res.status === 'connected') {
+          setPhoneLinkStatus('connected');
+          onRefresh();
+          setTimeout(() => {
+            setShowPhonePairing(false);
+          }, 1500);
+        } else if (res.status === 'expired') {
+          setPhoneLinkStatus('expired');
+        } else if (res.status === 'error' && res.error) {
+          setPhoneLinkStatus('error');
+          setPhonePairingError(res.error);
+        } else if (res.status === 'code_ready' && res.secondsLeft) {
+          setPhoneSecondsLeft(res.secondsLeft);
+        }
+      } catch (err) {}
+    }, 2000);
+
+    return () => {
+      clearInterval(secondTimer);
+      clearInterval(pollTimer);
+    };
+  }, [showPhonePairing, phonePairingStep, phoneLinkStatus]);
+
+  const handlePhonePairingSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!phoneNumber.trim()) return;
     setPhonePairingError(null);
     setPhonePairingLoading(true);
 
     try {
-      const res = await api.requestPairingCode(phoneNumber.trim(), countryCode.trim());
+      const fullPhone = `${countryCode.trim()}${phoneNumber.trim()}`;
+      const res = await api.linkPhone(fullPhone, userId);
       setPhonePairingCode(res.formattedCode || res.code);
+      setPhoneSecondsLeft(res.expiresInSec || 180);
+      setPhoneLinkStatus('code_ready');
       setPhonePairingStep('code');
     } catch (err: any) {
       setPhonePairingError(err.message || 'Failed to request pairing code. Please verify the phone number.');
+      setPhoneLinkStatus('error');
     } finally {
       setPhonePairingLoading(false);
     }
+  };
+
+  const handleCancelPhonePairing = async () => {
+    setShowPhonePairing(false);
+    setPhonePairingStep('input');
+    setPhoneLinkStatus('idle');
+    try {
+      await api.cancelLink(userId);
+    } catch (e) {}
   };
 
   const handleCopyCode = () => {
@@ -498,10 +559,7 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
           <div className="bg-white dark:bg-[#17211D] rounded-2xl border border-[#DCE7E1] dark:border-[#2D3D35] p-6 max-w-md w-full shadow-xl space-y-4 relative">
             <button
               type="button"
-              onClick={() => {
-                setShowPhonePairing(false);
-                setPhonePairingStep('input');
-              }}
+              onClick={handleCancelPhonePairing}
               className="absolute top-4 right-4 text-[#788980] hover:text-[#16231F] dark:hover:text-[#F2F7F4] p-1 rounded-lg"
               aria-label="Close dialog"
             >
@@ -517,12 +575,26 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
                   Link with Phone Number
                 </h3>
                 <span className="text-[11px] text-[#5D7168] dark:text-[#8A9A91]">
-                  Alternative multi-device verification
+                  Official Baileys multi-device pairing
                 </span>
               </div>
             </div>
 
-            {phonePairingStep === 'input' ? (
+            {phoneLinkStatus === 'connected' ? (
+              <div className="space-y-4 text-center py-4">
+                <div className="w-12 h-12 rounded-full bg-[#E5F5EF] dark:bg-[#1D3830] flex items-center justify-center text-[#087F5B] dark:text-[#25C993] mx-auto animate-bounce">
+                  <CheckCircle2 className="w-7 h-7" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-[#16231F] dark:text-[#F2F7F4]">
+                    WhatsApp Linked Successfully!
+                  </h4>
+                  <p className="text-xs text-[#5D7168] dark:text-[#8A9A91] mt-1">
+                    Your session is now active and ready for scheduling.
+                  </p>
+                </div>
+              </div>
+            ) : phonePairingStep === 'input' ? (
               <form onSubmit={handlePhonePairingSubmit} className="space-y-3 pt-2">
                 <p className="text-xs text-[#5D7168] dark:text-[#B2C1B8] leading-relaxed">
                   Enter your international WhatsApp phone number to generate an official 8-character verification code:
@@ -579,14 +651,43 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
                   </button>
                 </div>
               </form>
+            ) : phoneLinkStatus === 'expired' ? (
+              <div className="space-y-4 text-center py-4">
+                <div className="w-12 h-12 rounded-full bg-[#FEF3F2] dark:bg-[#2D1615] text-[#B42318] dark:text-[#FF938B] flex items-center justify-center mx-auto">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-[#16231F] dark:text-[#F2F7F4]">
+                    Pairing Code Expired
+                  </h4>
+                  <p className="text-xs text-[#5D7168] dark:text-[#8A9A91] mt-1">
+                    WhatsApp codes expire after 3 minutes for security. Please generate a fresh code.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handlePhonePairingSubmit()}
+                  disabled={phonePairingLoading}
+                  className="w-full bg-[#087F5B] hover:bg-[#06684B] dark:bg-[#25C993] dark:hover:bg-[#46D9A6] text-white dark:text-[#0D3027] text-xs font-semibold py-2.5 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-xs"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${phonePairingLoading ? 'animate-spin' : ''}`} />
+                  <span>Generate New Code</span>
+                </button>
+              </div>
             ) : (
               <div className="space-y-4 text-center py-2">
-                <p className="text-xs text-[#5D7168] dark:text-[#B2C1B8]">
-                  Enter this official code on your phone in WhatsApp:
-                </p>
+                <div className="flex items-center justify-between text-xs text-[#5D7168] dark:text-[#B2C1B8]">
+                  <span>Enter this code on your phone:</span>
+                  <span className="font-mono font-semibold text-[#087F5B] dark:text-[#25C993] flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    <span>
+                      {Math.floor(phoneSecondsLeft / 60)}:{(phoneSecondsLeft % 60).toString().padStart(2, '0')}
+                    </span>
+                  </span>
+                </div>
 
                 <div className="flex items-center justify-center gap-2">
-                  <div className="text-2xl font-mono font-bold tracking-widest text-[#087F5B] dark:text-[#25C993] bg-[#E5F5EF] dark:bg-[#1D3830] py-3 px-5 rounded-xl border border-[#087F5B]/30 dark:border-[#25C993]/30 select-all">
+                  <div className="text-2xl font-mono font-bold tracking-widest text-[#087F5B] dark:text-[#25C993] bg-[#E5F5EF] dark:bg-[#1D3830] py-3 px-5 rounded-xl border border-[#087F5B]/30 dark:border-[#25C993]/30 select-all shadow-inner">
                     {phonePairingCode}
                   </div>
                   <button
@@ -610,7 +711,7 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
                     <li>Open WhatsApp on your phone</li>
                     <li>Tap <strong>Settings</strong> (iOS) or <strong>⋮ More options</strong> (Android) &gt; <strong>Linked Devices</strong></li>
                     <li>Tap <strong>Link a Device</strong> &gt; <strong>Link with phone number instead</strong></li>
-                    <li>Type the code shown above</li>
+                    <li>Type the code <strong>{phonePairingCode}</strong></li>
                   </ol>
                 </div>
 
@@ -624,6 +725,7 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
                   onClick={() => {
                     setPhonePairingStep('input');
                     setPhonePairingError(null);
+                    setPhoneLinkStatus('idle');
                   }}
                   className="text-xs text-[#5D7168] dark:text-[#8A9A91] hover:underline pt-1 block mx-auto"
                 >

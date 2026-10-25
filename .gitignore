@@ -19,6 +19,7 @@ out/
 # WhatsApp Multi-Device Session Storage (CRITICAL - DO NOT COMMIT SESSIONS)
 sessions/
 wa_auth/
+phone_link/
 *auth_info_baileys*
 auth_info/
 
