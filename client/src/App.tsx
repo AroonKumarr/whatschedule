@@ -12,6 +12,9 @@ import { ActivityView } from './components/ActivityView';
 import { SettingsView } from './components/SettingsView';
 import { ChatView } from './components/ChatView';
 import { ComposerModal } from './components/ComposerModal';
+import { WhatsScheduleDashboard } from './components/dashboard/WhatsScheduleDashboard';
+import { ScheduleOptions } from './components/dashboard/SchedulePopover';
+import { X } from 'lucide-react';
 
 export const App: React.FC = () => {
   const { themeMode, toggleTheme } = useTheme();
@@ -35,9 +38,10 @@ export const App: React.FC = () => {
   const [stats, setStats] = useState<QueueStats>({ total: 0, pending: 0, sent: 0, failed: 0 });
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // 5-Item Primary Navigation (Requested by user: home, send-now, schedule, activity, settings)
+  // 5-Item Primary Navigation & Settings Overlay
   const [activeView, setActiveView] = useState<MainNavView>('home');
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
 
   // Check Master PIN Security Status on Mount
@@ -255,105 +259,88 @@ export const App: React.FC = () => {
     );
   }
 
-  const selectedMessage = schedules.find((s) => s.id === selectedId) || null;
+  const handleDashboardScheduleMessage = async (
+    recipientJid: string,
+    recipientName: string,
+    content: string,
+    file: File | null,
+    options?: ScheduleOptions
+  ) => {
+    try {
+      const formData = new FormData();
+      formData.append('recipient', recipientJid);
+      if (recipientName) formData.append('recipientName', recipientName);
+      formData.append('content', content);
+
+      const targetTime = options?.scheduledAt || new Date().toISOString();
+      formData.append('scheduledAt', targetTime);
+
+      if (file) {
+        formData.append('media', file);
+      }
+
+      const created = await api.createSchedule(formData);
+
+      // If scheduled for immediate send (within 10s), trigger instant send now
+      if (!options || Math.abs(new Date(options.scheduledAt).getTime() - Date.now()) < 10000) {
+        await api.sendNow(created.id);
+      }
+
+      await refreshSchedules();
+      await refreshStats();
+    } catch (err: any) {
+      alert(err?.message || 'Failed to dispatch message');
+    }
+  };
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex bg-[#F6F9F7] dark:bg-[#101815] transition-colors duration-150">
-      {/* 5-Item Navigation Left Sidebar */}
-      <Sidebar
+    <div className="h-screen w-screen overflow-hidden flex bg-[#0B0F0D] text-[#E9EDEF]">
+      {/* Three-Zone Shell Dashboard (Desktop, Tablet, Phone) */}
+      <WhatsScheduleDashboard
         schedules={schedules}
-        selectedId={selectedId}
-        onSelect={(id) => {
-          setSelectedId(id);
-          setActiveView('activity');
-        }}
-        onOpenComposer={() => setIsComposerOpen(true)}
-        activeView={activeView}
-        setActiveView={setActiveView}
+        contacts={contacts}
         status={status}
         stats={stats}
+        selectedId={selectedId}
+        onSelectSchedule={(id) => setSelectedId(id)}
+        onNewSchedule={() => setIsComposerOpen(true)}
+        onSendNow={handleSendNow}
         onRetry={handleRetry}
         onDelete={handleDelete}
-        onLock={handleLock}
-        onTogglePause={handleTogglePause}
-        themeMode={themeMode}
-        onToggleTheme={toggleTheme}
+        onScheduleMessage={handleDashboardScheduleMessage}
+        onLockApp={handleLock}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        isSending={sendingId !== null}
       />
 
-      {/* Main Right Screen Content: Switched cleanly between the 5 requested views */}
-      <main className="flex-1 h-full overflow-hidden flex flex-col">
-        {/* 1. Home Dashboard */}
-        {activeView === 'home' && (
-          <HomeView
-            status={status}
-            stats={stats}
-            schedules={schedules}
-            onNavigate={(view) => setActiveView(view)}
-            onSendNow={handleSendNow}
-            sendingId={sendingId}
-          />
-        )}
-
-        {/* 2. Send Now (Instant Dispatch) */}
-        {activeView === 'send-now' && (
-          <SendNowView
-            contacts={contacts}
-            onMessageSent={() => {
-              refreshSchedules();
-              refreshStats();
-              setActiveView('activity');
-            }}
-          />
-        )}
-
-        {/* 3. Schedule for Later (Calendar Timeline) */}
-        {activeView === 'schedule' && (
-          <CalendarView
-            schedules={schedules}
-            onSelect={(id) => {
-              setSelectedId(id);
-              setActiveView('activity');
-            }}
-            onOpenComposer={() => setIsComposerOpen(true)}
-          />
-        )}
-
-        {/* 4. Activity & Message Management */}
-        {activeView === 'activity' && (
-          <div className="flex-1 h-full flex flex-col md:flex-row overflow-hidden">
-            <ActivityView
-              schedules={schedules}
-              contacts={contacts}
-              onSelectMessage={(id) => setSelectedId(id)}
-              onSendNow={handleSendNow}
-              onRetry={handleRetry}
-              onDelete={handleDelete}
-              sendingId={sendingId}
+      {/* Settings Modal Overlay */}
+      {isSettingsOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+        >
+          <div className="relative w-full max-w-2xl bg-[#17211D] border border-[#2D3D35] rounded-3xl p-6 max-h-[90vh] overflow-y-auto shadow-2xl text-[#F2F7F4]">
+            <button
+              type="button"
+              onClick={() => setIsSettingsOpen(false)}
+              className="absolute top-4 right-4 text-[#A0A0A0] hover:text-white p-1 rounded-lg"
+              aria-label="Close settings"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <SettingsView
+              status={status}
+              stats={stats}
+              onLogout={() => {
+                setIsSettingsOpen(false);
+                handleLogout();
+              }}
+              onTogglePause={handleTogglePause}
             />
-            {selectedMessage && (
-              <div className="hidden lg:flex w-[420px] h-full border-l border-[#DCE7E1] dark:border-[#2D3D35]">
-                <ChatView
-                  selectedMessage={selectedMessage}
-                  onSendNow={handleSendNow}
-                  onCancel={handleCancel}
-                  onDelete={handleDelete}
-                  onOpenComposer={() => setIsComposerOpen(true)}
-                />
-              </div>
-            )}
           </div>
-        )}
-
-        {/* 5. Settings & Preferences */}
-        {activeView === 'settings' && (
-          <SettingsView
-            status={status}
-            stats={stats}
-            onLogout={handleLogout}
-            onTogglePause={handleTogglePause}
-          />
-        )}
-      </main>
+        </div>
+      )}
 
       {/* Schedule Composer Modal */}
       <ComposerModal
