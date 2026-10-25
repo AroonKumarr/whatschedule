@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model ScheduledMessage {
+  id            String    @id @default(uuid())
+  recipient     String    // Phone number or JID e.g. 15551234567 or 15551234567@s.whatsapp.net
+  recipientName String?   // Optional friendly contact name e.g. "HR Manager"
+  content       String?   // Message text body or media caption
+  type          String    @default("text") // text, image, video, document, audio
+  mediaPath     String?   // Absolute or relative path to stored media
+  mediaMimeType String?   // e.g. "video/mp4", "image/png", "application/pdf"
+  mediaFileName String?   // e.g. "salary_slip.pdf", "presentation.mp4"
+  scheduledAt   DateTime  // Exact scheduled execution timestamp (UTC)
+  status        String    @default("pending") // pending, processing, sent, failed, cancelled
+  error         String?   // Error log if dispatch failed
+  sentAt        DateTime? // Timestamp when confirmed sent
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Contact {
+  id              String    @id // JID or sanitized phone number
+  name            String?
+  number          String
+  avatarUrl       String?
+  lastContactedAt DateTime?
+  createdAt       DateTime  @default(now())
+}
+
+model AppConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
