@@ -3,9 +3,33 @@ import { whatsAppService } from '../services/whatsapp.service';
 import { schedulerService } from '../services/scheduler.service';
 import { detectMediaType } from '../services/media.service';
 import { authService } from '../services/auth.service';
+import { aiService } from '../services/ai.service';
 import { prisma } from '../database/prisma';
 
 export class ApiController {
+  // AI Drafting Assistant Endpoint (with rate limits, token budget & cache)
+  public static async generateAIDraft(req: Request, res: Response) {
+    try {
+      const { prompt, context, tone, recipientRole } = req.body;
+      if (!prompt) {
+        return res.status(400).json({ success: false, error: 'Prompt description is required' });
+      }
+
+      // Use client IP or auth token as user identifier for rate limiting
+      const userId = (req.headers['x-forwarded-for'] as string) || req.ip || 'local-user';
+
+      const result = await aiService.generateDraft(userId, {
+        prompt,
+        context,
+        tone: tone || 'professional',
+        recipientRole,
+      });
+
+      return res.json({ success: true, data: result });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
   // Security & Master PIN Endpoints
   public static async getAuthStatus(req: Request, res: Response) {
     try {

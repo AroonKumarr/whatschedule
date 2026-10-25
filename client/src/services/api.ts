@@ -104,6 +104,22 @@ export const api = {
     return data.data;
   },
 
+  async generateAIDraft(prompt: string, tone: string = 'professional', recipientRole?: string): Promise<string> {
+    const res = await fetch(`${API_BASE}/ai/draft`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getHeaders(),
+      },
+      body: JSON.stringify({ prompt, tone, recipientRole }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to generate AI draft');
+    }
+    return data.data.draft;
+  },
+
   async getSchedules(status?: string): Promise<ScheduledMessage[]> {
     const url = status ? `${API_BASE}/schedules?status=${status}` : `${API_BASE}/schedules`;
     const res = await fetch(url, {

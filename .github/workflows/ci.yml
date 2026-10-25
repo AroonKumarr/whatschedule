@@ -1,0 +1,29 @@
+name: WhatsSchedule CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm run install:all
+
+    - name: Generate Prisma Client
+      run: cd server && npx prisma generate
+
+    - name: Build Server and Client
+      run: npm run build

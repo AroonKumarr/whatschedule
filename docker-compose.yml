@@ -1,0 +1,22 @@
+services:
+  whatschedule:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: whatschedule
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - NODE_ENV=production
+      - SESSION_SECRET=change_this_to_a_random_32_char_secret_key
+    volumes:
+      - whatschedule_data:/app/server/prisma
+      - whatschedule_sessions:/app/server/sessions
+      - whatschedule_uploads:/app/uploads
+
+volumes:
+  whatschedule_data:
+  whatschedule_sessions:
+  whatschedule_uploads:

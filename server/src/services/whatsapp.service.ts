@@ -177,7 +177,63 @@ class WhatsAppService {
         }
       });
 
-      // Track Real Delivery & Read Receipts (Single Tick -> Double Grey Tick -> Double Blue Tick)
+      // Listen for Inbound Messages to Detect Opt-Out Keywords (STOP, UNSUBSCRIBE)
+      this.sock.ev.on('messages.upsert', async ({ messages, type }) => {
+        if (type !== 'notify') return;
+
+        for (const msg of messages) {
+          if (!msg.message || msg.key.fromMe) continue;
+
+          const senderJid = msg.key.remoteJid;
+          if (!senderJid || senderJid.includes('@g.us')) continue; // Ignore groups for opt-out
+
+          const text = (
+            msg.message.conversation ||
+            msg.message.extendedTextMessage?.text ||
+            ''
+          ).trim().toUpperCase();
+
+          // Check for standard compliance opt-out keywords
+          if (['STOP', 'UNSUBSCRIBE', 'CANCEL', 'OPTOUT', 'QUIT'].includes(text)) {
+            console.log(`[Compliance] Received opt-out keyword '${text}' from ${senderJid}`);
+            const rawNumber = senderJid.split('@')[0];
+
+            try {
+              await prisma.optOut.upsert({
+                where: { recipient: rawNumber },
+                create: {
+                  recipient: rawNumber,
+                  reason: `Inbound keyword: ${text}`,
+                },
+                update: {
+                  reason: `Inbound keyword: ${text}`,
+                },
+              });
+
+              await prisma.contact.updateMany({
+                where: { number: rawNumber },
+                data: { isOptedOut: true, optedOutAt: new Date() },
+              });
+
+              // Cancel any future pending schedules for this opted-out recipient
+              await prisma.scheduledMessage.updateMany({
+                where: {
+                  recipient: { contains: rawNumber },
+                  status: 'pending',
+                },
+                data: {
+                  status: 'cancelled',
+                  error: 'Cancelled automatically: Recipient sent opt-out request (STOP).',
+                },
+              });
+
+              this.notifyReceipts();
+            } catch (err) {
+              console.error('[Compliance] Error processing opt-out:', err);
+            }
+          }
+        }
+      });
       this.sock.ev.on('messages.update', async (updates) => {
         for (const update of updates) {
           const waId = update.key.id;
@@ -345,6 +401,13 @@ class WhatsAppService {
     }
 
     const jid = this.formatJid(to);
+    const rawNumber = to.replace(/[^0-9]/g, '');
+
+    // Opt-out Compliance Check: Never dispatch to unsubscribed recipients
+    const optOut = await prisma.optOut.findUnique({ where: { recipient: rawNumber } });
+    if (optOut) {
+      throw new Error(`Dispatch blocked: Recipient ${rawNumber} has opted out of communications (${optOut.reason}).`);
+    }
 
     // Apply human typing simulation (Anti-ban safety)
     await this.applyHumanEmulation(jid, false);
@@ -369,6 +432,13 @@ class WhatsAppService {
     }
 
     const jid = this.formatJid(to);
+    const rawNumber = to.replace(/[^0-9]/g, '');
+
+    // Opt-out Compliance Check
+    const optOut = await prisma.optOut.findUnique({ where: { recipient: rawNumber } });
+    if (optOut) {
+      throw new Error(`Dispatch blocked: Recipient ${rawNumber} has opted out of communications.`);
+    }
     const fileBuffer = fs.readFileSync(filePath);
     const isAudio = mimeType.startsWith('audio/');
 

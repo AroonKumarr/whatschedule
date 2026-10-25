@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Contact } from '../types';
+import { api } from '../services/api';
 import {
   X,
   Clock,
@@ -68,6 +69,10 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [showAiPrompt, setShowAiPrompt] = useState(false);
+  const [aiPromptInput, setAiPromptInput] = useState('');
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+
   const MAX_CHAR_LIMIT = 65536; // Official WhatsApp maximum limit
   const MAX_FILE_SIZE_MB = 100; // 100MB maximum file size limit
 
@@ -86,6 +91,22 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
     else if (preset === 'tomorrow9pm') target = setMinutes(setHours(addDays(now, 1), 21), 0);
 
     setScheduledAt(format(target, "yyyy-MM-dd'T'HH:mm"));
+  };
+
+  const handleAiDraft = async () => {
+    if (!aiPromptInput.trim()) return;
+    setIsAiGenerating(true);
+    setError(null);
+    try {
+      const draft = await api.generateAIDraft(aiPromptInput, 'professional', recipientName);
+      setContent(draft);
+      setShowAiPrompt(false);
+      setAiPromptInput('');
+    } catch (err: any) {
+      setError(err?.message || 'Failed to generate AI draft');
+    } finally {
+      setIsAiGenerating(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -413,16 +434,54 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
             </div>
           </div>
 
-          {/* Message Content with Live Counter */}
+          {/* Message Content with Live Counter & AI Assistant */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-[#8696a0]">
                 Message Text / Caption
               </label>
-              <span className={`text-[11px] font-mono ${content.length > 4000 ? 'text-[#e5a800]' : 'text-[#8696a0]'}`}>
-                {content.length.toLocaleString()} / {MAX_CHAR_LIMIT.toLocaleString()} chars
-              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAiPrompt(!showAiPrompt)}
+                  className="text-xs text-[#00a884] hover:text-[#25D366] font-medium flex items-center gap-1 transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>AI Assist Draft</span>
+                </button>
+                <span className={`text-[11px] font-mono ${content.length > 4000 ? 'text-[#e5a800]' : 'text-[#8696a0]'}`}>
+                  {content.length.toLocaleString()} / {MAX_CHAR_LIMIT.toLocaleString()} chars
+                </span>
+              </div>
             </div>
+
+            {/* AI Prompt Input Bar */}
+            {showAiPrompt && (
+              <div className="mb-2.5 p-2.5 bg-[#111b21] rounded-xl border border-[#00a884]/40 flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. Follow up with HR about salary slip politely..."
+                  value={aiPromptInput}
+                  onChange={(e) => setAiPromptInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAiDraft();
+                    }
+                  }}
+                  className="flex-1 bg-transparent text-xs text-white placeholder-[#8696a0] focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleAiDraft}
+                  disabled={isAiGenerating || !aiPromptInput.trim()}
+                  className="px-3 py-1 bg-[#00a884] hover:bg-[#02bd94] disabled:opacity-50 text-white rounded-lg text-xs font-medium"
+                >
+                  {isAiGenerating ? 'Drafting...' : 'Generate'}
+                </button>
+              </div>
+            )}
+
             <textarea
               rows={4}
               maxLength={MAX_CHAR_LIMIT}

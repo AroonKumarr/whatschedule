@@ -87,6 +87,22 @@ class SchedulerService {
       });
 
       for (const msg of dueMessages) {
+        // Opt-out check before processing
+        const rawNumber = msg.recipient.replace(/[^0-9]/g, '');
+        const isOptedOut = await prisma.optOut.findUnique({ where: { recipient: rawNumber } });
+
+        if (isOptedOut) {
+          await prisma.scheduledMessage.update({
+            where: { id: msg.id },
+            data: {
+              status: 'cancelled',
+              error: `Blocked by Compliance: Recipient has opted out (${isOptedOut.reason}).`,
+            },
+          });
+          this.notifyUpdate();
+          continue;
+        }
+
         // Mark as processing
         await prisma.scheduledMessage.update({
           where: { id: msg.id },

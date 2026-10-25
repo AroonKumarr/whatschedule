@@ -8,24 +8,26 @@ datasource db {
 }
 
 model ScheduledMessage {
-  id             String    @id @default(uuid())
-  waMessageId    String?   // WhatsApp protocol message ID (key.id) for receipt tracking
-  recipient      String    // Phone number or JID e.g. 15551234567@s.whatsapp.net
-  recipientName  String?   // Friendly contact name e.g. "HR Manager"
-  content        String?   // Message text body or media caption
-  type           String    @default("text") // text, image, video, document, audio
-  mediaPath      String?   // Absolute or relative path to stored media
-  mediaMimeType  String?   // e.g. "video/mp4", "video/quicktime", "image/heic", "image/png"
-  mediaFileName  String?   // Original uploaded file name
-  scheduledAt    DateTime  // Scheduled dispatch timestamp (UTC)
-  status         String    @default("pending") // pending, processing, sent, failed, cancelled
-  deliveryStatus String    @default("pending") // pending, sent (single tick), delivered (double tick), read (blue tick)
-  error          String?   // Error log if dispatch failed
-  sentAt         DateTime? // Timestamp when dispatched
-  deliveredAt    DateTime? // Timestamp when delivered to recipient phone
-  readAt         DateTime? // Timestamp when recipient opened/read the message
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id               String    @id @default(uuid())
+  waMessageId      String?   // WhatsApp protocol message ID (key.id) for receipt tracking
+  recipient        String    // Phone number or JID e.g. 15551234567@s.whatsapp.net
+  recipientName    String?   // Friendly contact name e.g. "HR Manager"
+  content          String?   // Message text body or media caption
+  type             String    @default("text") // text, image, video, document, audio
+  mediaPath        String?   // Absolute or relative path to stored media
+  mediaMimeType    String?   // e.g. "video/mp4", "video/quicktime", "image/heic", "image/png"
+  mediaFileName    String?   // Original uploaded file name
+  scheduledAt      DateTime  // Scheduled dispatch timestamp (UTC)
+  status           String    @default("pending") // pending, processing, sent, failed, cancelled
+  deliveryStatus   String    @default("pending") // pending, sent (single tick), delivered (double tick), read (blue tick)
+  error            String?   // Error log if dispatch failed
+  consentConfirmed Boolean   @default(true)      // Auditable recipient consent indicator
+  consentTimestamp DateTime  @default(now())     // Timestamp when sender confirmed consent
+  sentAt           DateTime? // Timestamp when dispatched
+  deliveredAt      DateTime? // Timestamp when delivered to recipient phone
+  readAt           DateTime? // Timestamp when recipient opened/read the message
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 model Contact {
@@ -33,8 +35,17 @@ model Contact {
   name            String?   // Saved or WhatsApp notify name
   number          String    // Clean phone number
   avatarUrl       String?
+  isOptedOut      Boolean   @default(false)     // Opt-out flag to prevent sending to unsubscribed contacts
+  optedOutAt      DateTime?
   lastContactedAt DateTime?
   createdAt       DateTime  @default(now())
+}
+
+model OptOut {
+  id         String   @id @default(uuid())
+  recipient  String   @unique // Sanitized phone number or JID
+  reason     String?  // e.g. "STOP keyword received" or "Manual user opt-out"
+  createdAt  DateTime @default(now())
 }
 
 model AppConfig {

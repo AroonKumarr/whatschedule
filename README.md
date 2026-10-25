@@ -1,118 +1,105 @@
 # WhatsSchedule ⏰💬
 
-> **The #1 Open-Source WhatsApp Message, Media & Video Scheduler**  
+> **The Open-Source WhatsApp Message, Media & Automation Engine**  
 > *Architected and maintained by **Aroon Kumar**.*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev)
 [![Vite](https://img.shields.io/badge/Vite-6-646CFF.svg)](https://vite.dev)
-[![WhatsApp Multi-Device](https://img.shields.io/badge/Protocol-Multi--Device-25D366.svg)](https://github.com/WhiskeySockets/Baileys)
-[![SQLite](https://img.shields.io/badge/Storage-Embedded%20SQLite-003B57.svg)](https://sqlite.org)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](docker-compose.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 ---
 
-## 🔍 Why WhatsSchedule? (Schedule WhatsApp Messages on iPhone, Android & Mac)
+## ⚡ 10-Second Value Overview
 
-Have you ever remembered at night: *"I need to message HR tomorrow at 9:00 AM regarding salary updates"* — but you'll be sleeping, commuting, or away from your phone?
+WhatsSchedule is an open-source, privacy-first messaging scheduler designed for professionals, teams, and developers:
 
-**WhatsSchedule** is the open-source, privacy-first answer to WhatsApp scheduling:
+```
+[ Your Phone / Laptop ] ────► [ WhatsSchedule Engine (Local SQLite Queue) ]
+                                            │
+                                            ▼ (Multi-Device Protocol)
+                               [ WhatsApp Encrypted Cloud ]
+                                            │
+                                            ▼
+                           [ Recipient Receives on Schedule ]
+```
 
-* 📱 **Zero Official Meta API Required**: No Meta Developer accounts, business verifications, paid templates, or credit cards needed.
-* 🔒 **Works When Phone Is Locked or Asleep**: Operates at the protocol level via WhatsApp's Multi-Device companion architecture. Your primary phone does not need to be active, unlocked, or even connected to Wi-Fi at the time of delivery.
-* 🎥 **All Media & File Formats**: Full support for HD Videos (`.mov`, `.mp4`), Photos (including Apple `.heic`, `.png`, `.jpg`), Voice Memos (`.m4a`), and Documents (`.pdf`, `.docx`).
-* ✓✓ **Authentic WhatsApp Double Ticks**: Real-time receipt tracking showing single ticks, double grey ticks (delivered), and double blue ticks (read).
-* 🛡️ **Anti-Ban Human Emulation**: Built-in 1.4s–3.2s natural typing indicators (`"composing..."` / `"recording..."`) to ensure 100% account safety.
-* ⚡ **Blazing Fast**: Embedded SQLite persistent queue that survives reboots, paired with a React 19 + Tailwind dashboard styled just like WhatsApp Web.
-* 🔐 **100% On-Device Isolation**: Your credentials, contacts, and media never leave your local machine.
+* 🚀 **Unlimited Scheduling Power**: Schedule unlimited text messages, HD videos, documents, and voice notes with zero artificial paywalls.
+* 🤖 **Built-In AI Assistant**: Production-grade drafting assistant with per-user rate limits, token budgeting, concurrency caps, and SHA-256 caching.
+* 🔒 **Master Security PIN Protection**: Cryptographic PBKDF2 (100,000 iterations) passcode lock preventing unauthorized access across shared computers or browser profiles.
+* 🛑 **Compliance & Opt-Out Engine**: Automatically detects inbound `STOP` or `UNSUBSCRIBE` requests and halts future dispatches to that recipient.
+* 🚨 **Emergency Queue Pause Switch**: 1-click circuit breaker to immediately halt all outgoing message queues.
+* ✓✓ **Real-Time Delivery & Read Ticks**: Live WebSocket updates for single ticks (sent), double grey ticks (delivered), and double blue ticks (read).
+* 📁 **All Media Formats**: Full native support for Apple QuickTime MOV, HEIC photos, M4A voice notes, and documents up to 100MB.
 
 ---
 
-## 📲 Quick Install: iPhone, Android & Mac ($0 Cost — No App Store Fees)
+## 📦 Painless Quick Start
 
-No need to pay $99/year to Apple or $25 to Google. You can run WhatsSchedule on any device in seconds:
-
-### 🍏 On iPhone (iOS) — 100% Free PWA
-1. Open Safari and navigate to your WhatsSchedule URL (e.g. `http://your-mac-ip:5001`).
-2. Tap the **Share** button (⎙) at the bottom.
-3. Tap **"Add to Home Screen"**.
-4. **Done!** A native WhatsApp Scheduler app icon is added to your iPhone home screen. It runs in full-screen standalone mode without any browser URL bar!
-
-### 🤖 On Android — 1-Tap WebAPK
-1. Open Google Chrome and visit your WhatsSchedule URL.
-2. Tap the 3 dots (⋮) and select **"Install App"** (or *Add to Home screen*).
-3. Android creates a native app icon in your app drawer with standalone window support.
-
-### 💻 On MacBook / Windows / Linux — 1-Click Launch
-* **Mac / Linux**: Double-click or run `./start.sh` in terminal. It installs missing packages and launches your browser automatically.
+### Option A: 1-Click Launchers (Zero Terminal Knowledge)
+* **Mac & Linux**: Double-click or run `./start.sh` (installs packages, builds assets, and opens your browser automatically).
 * **Windows**: Double-click `start.bat`.
 
----
-
-## 🚀 Developer Quick Start
-
+### Option B: Docker Compose
 ```bash
-# 1. Clone repository
+# Clone the repository
 git clone https://github.com/AroonKumarr/whatschedule.git
 cd whatschedule
 
-# 2. Install workspace dependencies
+# Start containerized instance
+docker compose up -d
+```
+Visit `http://localhost:5001` in your browser.
+
+### Option C: Developer Setup
+```bash
+git clone https://github.com/AroonKumarr/whatschedule.git
+cd whatschedule
+
+# Install workspace dependencies
 npm run install:all
 
-# 3. Start development server (Port 5001 & Port 5173 with hot reload)
+# Run concurrent development servers (Port 5001 & Port 5173 with HMR)
 npm run dev
-
-# 4. Or run single-port production mode
-npm run build && npm start
 ```
-
-Open your browser at **`http://localhost:5001`**.
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+## 📱 Mobile Access (iPhone & Android — $0 Cost)
 
-We chose the modern, high-speed TypeScript ecosystem:
+WhatsSchedule is fully configured as a standalone **Progressive Web App (PWA)**:
 
-```
-[ Frontend: React 19 + Vite + Tailwind CSS (WhatsApp Web Theme) ]
-                             │
-                      REST & WebSockets
-                             │
-[ Backend: Node.js + Express + Prisma ORM + SQLite Queue ]
-                             │
-              Binary WebSocket Protocol (Baileys)
-                             │
-         [ WhatsApp Multi-Device Encrypted Cloud ]
-```
+* **iPhone (iOS)**: Open Safari $\to$ visit your instance URL $\to$ tap **Share** (⎙) $\to$ **Add to Home Screen**. Opens full-screen with native gestures and zero browser bars.
+* **Android**: Open Chrome $\to$ tap menu (⋮) $\to$ **Install App**. Creates a native WebAPK in your app drawer.
+
+---
+
+## 🛡️ Architecture & Security Model
 
 * **Frontend**: React 19, TypeScript, Vite 6, Tailwind CSS, Lucide Icons, Date-fns.
 * **Backend**: Node.js, Express, TypeScript, Multer, Pino.
-* **Database**: Embedded SQLite with Prisma ORM (zero setup, single `dev.db` file).
-* **Protocol Core**: `@whiskeysockets/baileys` (runs directly in <60MB RAM without Chromium).
-
-👉 **For an in-depth architecture walkthrough, read the [Developer Guide](DEVELOPER_GUIDE.md).**
-
----
-
-## 🤝 Contributing & Community
-
-Contributions are what make open source thrive! Whether you are:
-- Adding **AI Assistants** to auto-draft salary or follow-up messages
-- Adding **LinkedIn / Twitter** post scheduling
-- Improving localized translations
-- Reporting bugs or suggesting UX enhancements
-
-Please read our [Contributing Guide](CONTRIBUTING.md) to get started with PRs, code styles, and good first issues.
+* **Database**: Embedded SQLite via Prisma ORM (zero setup, single `dev.db` file).
+* **AI Service Layer**: Built with global concurrency controls (5 max), per-user rate limiting (15 drafts/min), and fallback templates.
+* **Threat Mitigation**: Signed HMAC-SHA256 session tokens with 24-hour expiration; timing-safe signature comparison; isolated `sessionStorage`.
 
 ---
 
-## ⚖️ Legal Disclaimer & Trademark Protection
+## 🤝 Community & Contributing
+
+We welcome community contributions! Please read:
+* [`CONTRIBUTING.md`](CONTRIBUTING.md): Step-by-step contribution guidelines and PR templates.
+* [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md): In-depth architectural manual, multi-device socket breakdown, and testing instructions.
+* [`CHANGELOG.md`](CHANGELOG.md): Complete release history and roadmap.
+
+---
+
+## ⚖️ Legal Notice & Trademark Disclaimer
 
 **WhatsApp** is a registered trademark of **Meta Platforms, Inc.**
 
-**WhatsSchedule** is an independent open-source productivity utility created and owned by **Aroon Kumar**. It is **NOT** affiliated with, authorized, maintained, sponsored, or endorsed by WhatsApp LLC, Meta Platforms, Inc., or any of their affiliates. See [`LEGAL_DISCLAIMER.md`](LEGAL_DISCLAIMER.md) for details.
+**WhatsSchedule** is an independent open-source productivity software project created and owned by **Aroon Kumar**. It is **NOT** affiliated with, authorized, maintained, sponsored, or endorsed by WhatsApp LLC, Meta Platforms, Inc., or any of their affiliates. See [`LEGAL_DISCLAIMER.md`](LEGAL_DISCLAIMER.md) for details.
 
 ---
 

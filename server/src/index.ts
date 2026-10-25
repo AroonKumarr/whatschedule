@@ -56,6 +56,7 @@ app.get('/api/status', ApiController.getStatus);
 app.post('/api/logout', requireAuth, ApiController.logout);
 app.get('/api/contacts', requireAuth, ApiController.getContacts);
 app.post('/api/contacts', requireAuth, ApiController.saveContact);
+app.post('/api/ai/draft', requireAuth, ApiController.generateAIDraft);
 app.get('/api/schedules', requireAuth, ApiController.getSchedules);
 app.post('/api/schedules', requireAuth, upload.single('media'), ApiController.createSchedule);
 app.post('/api/queue/pause', requireAuth, ApiController.pauseQueue);
