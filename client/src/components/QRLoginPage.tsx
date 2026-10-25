@@ -6,43 +6,44 @@ import {
   QrCode,
   ShieldCheck,
   CheckCircle2,
-  Lock,
-  EyeOff,
   Clock,
   Phone,
-  ChevronDown,
-  ChevronUp,
+  Code2,
   ExternalLink,
   AlertCircle,
-  HelpCircle,
-  Sparkles,
+  Sun,
+  Moon,
   Smartphone,
   ArrowRight,
-  LogOut,
+  X,
 } from 'lucide-react';
 
 interface QRLoginPageProps {
   status: WhatsAppStatus;
   onRefresh: () => void;
+  themeMode?: 'light' | 'dark' | 'auto';
+  onToggleTheme?: () => void;
 }
 
-export const QRLoginPage: React.FC<QRLoginPageProps> = ({ status, onRefresh }) => {
-  // Expiry countdown timer (WhatsApp QR codes typically expire after 60s)
+export const QRLoginPage: React.FC<QRLoginPageProps> = ({
+  status,
+  onRefresh,
+  themeMode = 'auto',
+  onToggleTheme,
+}) => {
+  // Expiry countdown timer (WhatsApp pairing QR codes expire after ~60s)
   const [secondsLeft, setSecondsLeft] = useState<number>(60);
   const [isExpired, setIsExpired] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-  // Phone pairing toggle state
+  // Phone pairing modal state
   const [showPhonePairing, setShowPhonePairing] = useState<boolean>(false);
   const [countryCode, setCountryCode] = useState<string>('+1');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
-  const [phonePairingStep, setPhonePairingStep] = useState<'input' | 'code' | 'error'>('input');
+  const [phonePairingStep, setPhonePairingStep] = useState<'input' | 'code'>('input');
   const [phonePairingCode, setPhonePairingCode] = useState<string>('');
 
-  // Expandable Help Accordion state
-  const [activeHelpAccordion, setActiveHelpAccordion] = useState<string | null>(null);
-
-  // Reset countdown whenever QR code changes
+  // Reset countdown whenever a fresh QR code arrives
   useEffect(() => {
     if (status.qrCodeUrl) {
       setSecondsLeft(60);
@@ -51,7 +52,7 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({ status, onRefresh }) =
     }
   }, [status.qrCodeUrl]);
 
-  // Countdown effect
+  // Countdown timer effect
   useEffect(() => {
     if (status.state !== 'qr_ready' || isExpired) return;
 
@@ -79,540 +80,479 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({ status, onRefresh }) =
   const handlePhonePairingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!phoneNumber.trim()) return;
-
-    // Baileys pairing code explanation
-    // In current backend, QR code socket flow is active.
-    // Display guidance to user with pairing protocol details.
     setPhonePairingStep('code');
     setPhonePairingCode('WS' + Math.floor(100000 + Math.random() * 900000));
   };
 
-  const toggleAccordion = (id: string) => {
-    setActiveHelpAccordion((prev) => (prev === id ? null : id));
-  };
-
   return (
-    <div className="min-h-screen bg-[#111B21] flex flex-col justify-between text-[#E9EDEF] antialiased selection:bg-[#25D366] selection:text-[#111B21]">
+    <div className="min-h-screen bg-[#F6F9F7] dark:bg-[#101815] text-[#16231F] dark:text-[#F2F7F4] flex flex-col justify-between p-4 sm:p-6 lg:p-8 antialiased selection:bg-[#25C993] selection:text-[#0D3027] relative overflow-x-hidden transition-colors duration-150">
+      
+      {/* Subtle Ambient Background Accents */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-32 -right-32 w-96 h-96 rounded-full bg-[#E5F5EF]/60 dark:bg-[#1D3830]/20 blur-3xl"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-[#E5F5EF]/60 dark:bg-[#1D3830]/20 blur-3xl"
+      />
+
       {/* ========================================================= */}
-      {/* 1. TEAL HERO TOP BAND (~120px height)                     */}
+      {/* 1. TOP HEADER                                             */}
       {/* ========================================================= */}
       <header
         role="banner"
-        className="h-[120px] bg-[#05A985] px-4 sm:px-8 pt-5 shadow-lg border-b border-[#05A985]/30 relative z-0 flex items-start"
+        className="max-w-[960px] mx-auto w-full flex items-center justify-between pb-6 sm:pb-8 relative z-10"
       >
-        <div className="max-w-[870px] mx-auto w-full flex items-center justify-between">
-          {/* Logo & App Brand Lockup */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#111B21] p-1.5 flex items-center justify-center shadow-md border border-white/10">
-              <BrandLogo size={28} />
+        {/* Brand Lockup: Logo + Wordmark + Subtitle */}
+        <div className="flex items-center gap-3">
+          <BrandLogo size={42} />
+          <div>
+            <div className="flex items-center tracking-tight leading-none">
+              <span className="text-xl sm:text-2xl font-bold text-[#0D3027] dark:text-[#F2F7F4]">
+                Whats
+              </span>
+              <span className="text-xl sm:text-2xl font-bold text-[#087F5B] dark:text-[#25C993]">
+                Schedule
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white leading-none">
-                  WhatsSchedule
-                </h1>
-                <a
-                  href="https://github.com/AroonKumarr/whatschedule"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold bg-[#111B21]/40 hover:bg-[#111B21]/60 text-white/95 px-2.5 py-0.5 rounded-full border border-white/20 transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
-                  aria-label="View WhatsSchedule source code on GitHub (opens in new tab)"
-                >
-                  <span>Open Source</span>
-                  <ExternalLink className="w-3 h-3 text-[#25D366]" />
-                </a>
-              </div>
-              <p className="text-[12px] text-white/85 mt-0.5 font-medium">
-                Autonomous WhatsApp Message & Media Scheduler
-              </p>
-            </div>
+            <p className="text-xs text-[#5D7168] dark:text-[#8A9A91] mt-1 font-normal">
+              Message scheduling, made simple.
+            </p>
           </div>
+        </div>
 
-          {/* Badge: Runs on your device */}
-          <div className="flex items-center gap-2 text-xs font-medium text-white/90 bg-[#111B21]/30 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/15">
-            <span className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse motion-reduce:animate-none" />
+        {/* Header Right Controls: Device Indicator + Theme Toggle */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Runs Locally on your device pill */}
+          <div className="flex items-center gap-2 text-xs font-medium text-[#16231F] dark:text-[#F2F7F4] bg-[#E5F5EF] dark:bg-[#1E2B25] px-3 py-1.5 rounded-full border border-[#DCE7E1] dark:border-[#2D3D35] shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-[#25C993] dark:bg-[#25C993] animate-pulse motion-reduce:animate-none" />
             <span className="hidden sm:inline">Runs locally on your device</span>
             <span className="sm:hidden">Local</span>
           </div>
+
+          {/* Theme Toggle (Sun / Moon) */}
+          {onToggleTheme && (
+            <button
+              type="button"
+              onClick={onToggleTheme}
+              className="p-2 rounded-xl bg-white dark:bg-[#17211D] border border-[#DCE7E1] dark:border-[#2D3D35] text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#087F5B] dark:hover:text-[#25C993] hover:border-[#087F5B]/40 dark:hover:border-[#25C993]/40 transition-all duration-150 shadow-xs focus-visible:ring-2 focus-visible:ring-[#087F5B] dark:focus-visible:ring-[#25C993] focus-visible:outline-none"
+              title="Toggle Light / Dark theme"
+              aria-label="Toggle theme"
+            >
+              <span className="dark:hidden">
+                <Moon className="w-4 h-4" />
+              </span>
+              <span className="hidden dark:inline">
+                <Sun className="w-4 h-4" />
+              </span>
+            </button>
+          )}
         </div>
       </header>
 
       {/* ========================================================= */}
-      {/* 2. MAIN ELEVATED CARD CONTAINER (870px Max Width, 24px R) */}
+      {/* 2. MAIN CENTERED CARD                                     */}
       {/* ========================================================= */}
       <main
         role="main"
-        className="flex-1 max-w-[870px] w-full mx-auto -mt-10 px-3 sm:px-6 pb-8 relative z-10"
+        className="max-w-[960px] mx-auto w-full my-auto relative z-10"
       >
-        <div className="bg-[#1F2C34] rounded-[24px] shadow-2xl border border-[#2A3942] p-6 sm:p-9">
+        <div className="bg-white dark:bg-[#17211D] rounded-2xl sm:rounded-3xl shadow-sm border border-[#DCE7E1] dark:border-[#2D3D35] p-6 sm:p-10 transition-colors duration-150">
           
-          {/* Responsive Layout Grid:
-              - Mobile: Flex column-reverse where QR CODE IS FIRST, followed by instructions below
-              - Desktop (md+): 2-column grid with instructions left, QR panel right
-          */}
-          <div className="flex flex-col-reverse md:grid md:grid-cols-12 gap-8 lg:gap-10 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-center">
             
             {/* ----------------------------------------------------- */}
-            {/* LEFT COLUMN (Desktop): Instructions & Value Props      */}
+            {/* LEFT COLUMN: Connection Instructions & Values         */}
             {/* ----------------------------------------------------- */}
-            <div className="w-full md:col-span-7 space-y-6">
+            <div className="w-full md:col-span-7 flex flex-col justify-between">
               
-              {/* Heading & Subtitle */}
               <div>
-                <h2 className="text-2xl sm:text-[26px] font-semibold text-[#E9EDEF] tracking-tight leading-snug">
+                {/* Category Tracking Label */}
+                <span className="text-[11px] font-bold tracking-widest text-[#087F5B] dark:text-[#25C993] uppercase block">
+                  Connect your WhatsApp
+                </span>
+
+                {/* Main Heading */}
+                <h1 className="text-2xl sm:text-[32px] font-bold text-[#16231F] dark:text-[#F2F7F4] tracking-tight leading-snug mt-1.5">
                   Link your WhatsApp to start scheduling
-                </h2>
-                <p className="text-sm text-[#8696A0] mt-1.5 leading-relaxed">
+                </h1>
+
+                {/* Subtitle */}
+                <p className="text-sm text-[#5D7168] dark:text-[#B2C1B8] mt-2 leading-relaxed">
                   Link your WhatsApp account using your phone camera. Takes about 30 seconds.
                 </p>
-              </div>
 
-              {/* 4-Step Numbered Instructions */}
-              <nav aria-label="WhatsApp Linking Instructions">
-                <ol className="space-y-3.5 text-sm text-[#E9EDEF]">
-                  <li className="flex items-start gap-3.5">
-                    <span
-                      aria-hidden="true"
-                      className="w-7 h-7 rounded-full bg-[#111B21] text-[#05A985] font-bold flex items-center justify-center shrink-0 border border-[#2A3942] text-xs shadow-inner"
-                    >
-                      1
-                    </span>
-                    <span className="pt-0.5 leading-normal">
-                      Open <strong className="text-white font-semibold">WhatsApp</strong> on your phone
-                    </span>
-                  </li>
-
-                  <li className="flex items-start gap-3.5">
-                    <span
-                      aria-hidden="true"
-                      className="w-7 h-7 rounded-full bg-[#111B21] text-[#05A985] font-bold flex items-center justify-center shrink-0 border border-[#2A3942] text-xs shadow-inner"
-                    >
-                      2
-                    </span>
-                    <span className="pt-0.5 leading-normal text-[#D1D7DB]">
-                      Tap <strong className="text-white font-semibold">Menu</strong> (three dots ⠇ on Android) or{' '}
-                      <strong className="text-white font-semibold">Settings</strong> (⚙ on iPhone)
-                    </span>
-                  </li>
-
-                  <li className="flex items-start gap-3.5">
-                    <span
-                      aria-hidden="true"
-                      className="w-7 h-7 rounded-full bg-[#111B21] text-[#05A985] font-bold flex items-center justify-center shrink-0 border border-[#2A3942] text-xs shadow-inner"
-                    >
-                      3
-                    </span>
-                    <span className="pt-0.5 leading-normal text-[#D1D7DB]">
-                      Tap <strong className="text-white font-semibold">Linked devices</strong> and then{' '}
-                      <strong className="text-white font-semibold">Link a device</strong>
-                    </span>
-                  </li>
-
-                  <li className="flex items-start gap-3.5">
-                    <span
-                      aria-hidden="true"
-                      className="w-7 h-7 rounded-full bg-[#111B21] text-[#05A985] font-bold flex items-center justify-center shrink-0 border border-[#2A3942] text-xs shadow-inner"
-                    >
-                      4
-                    </span>
-                    <span className="pt-0.5 leading-normal text-[#D1D7DB]">
-                      Point your phone at this screen to capture the QR code
-                    </span>
-                  </li>
-                </ol>
-              </nav>
-
-              {/* Two Feature Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                {/* Feature Card 1: Privacy */}
-                <article className="bg-[#111B21] p-3.5 rounded-2xl border border-[#2A3942] hover:border-[#05A985]/50 transition-colors duration-200">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="w-6 h-6 rounded-lg bg-[#05A985]/15 flex items-center justify-center text-[#25D366]">
-                      <EyeOff className="w-3.5 h-3.5" />
-                    </div>
-                    <h3 className="font-semibold text-xs text-[#E9EDEF]">
-                      Designed with privacy in mind
-                    </h3>
-                  </div>
-                  <p className="text-[11px] text-[#8696A0] leading-relaxed">
-                    Messages stay strictly between you and your recipients. Credentials are encrypted locally on this device.
-                  </p>
-                </article>
-
-                {/* Feature Card 2: Scheduling Control */}
-                <article className="bg-[#111B21] p-3.5 rounded-2xl border border-[#2A3942] hover:border-[#05A985]/50 transition-colors duration-200">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="w-6 h-6 rounded-lg bg-[#05A985]/15 flex items-center justify-center text-[#25D366]">
-                      <Clock className="w-3.5 h-3.5" />
-                    </div>
-                    <h3 className="font-semibold text-xs text-[#E9EDEF]">
-                      Schedule with control
-                    </h3>
-                  </div>
-                  <p className="text-[11px] text-[#8696A0] leading-relaxed">
-                    Set exact send dates and times. Queue, edit, cancel, or trigger instant send anytime from your dashboard.
-                  </p>
-                </article>
-              </div>
-
-              {/* Platform Warning & Trademark Disclaimer */}
-              <div className="p-3 rounded-xl bg-[#111B21]/70 border border-[#2A3942]/60 text-[11px] text-[#8696A0] leading-relaxed">
-                <span className="text-white font-medium">Independent Software Note:</span> WhatsSchedule is an independent open-source tool. WhatsApp is a registered trademark of Meta Platforms, Inc. Not affiliated with, authorized, or endorsed by WhatsApp LLC or Meta Platforms, Inc.
-              </div>
-
-              {/* Phone Pairing Toggle Option */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowPhonePairing((prev) => !prev)}
-                  className="text-xs text-[#25D366] hover:text-[#05A985] font-medium inline-flex items-center gap-1.5 transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[#25D366] rounded px-1 py-0.5 focus-visible:outline-none"
-                >
-                  <Phone className="w-3.5 h-3.5" />
-                  <span>
-                    {showPhonePairing
-                      ? 'Back to QR Code Scanning'
-                      : 'Link with phone number instead'}
-                  </span>
-                </button>
-              </div>
-
-              {/* Expandable Phone Pairing Sub-panel */}
-              {showPhonePairing && (
-                <div className="p-4 bg-[#111B21] rounded-2xl border border-[#05A985]/40 space-y-3 transition-all duration-200">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-semibold text-white flex items-center gap-1.5">
-                      <Smartphone className="w-4 h-4 text-[#25D366]" />
-                      Link with Phone Number
-                    </h4>
-                    <span className="text-[10px] text-[#8696A0] uppercase font-bold tracking-wider">
-                      Alternative Method
-                    </span>
-                  </div>
-
-                  {phonePairingStep === 'input' ? (
-                    <form onSubmit={handlePhonePairingSubmit} className="space-y-3">
-                      <p className="text-[11px] text-[#8696A0] leading-relaxed">
-                        Enter your international WhatsApp phone number to generate an 8-digit verification pairing code.
-                      </p>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={countryCode}
-                          onChange={(e) => setCountryCode(e.target.value)}
-                          aria-label="Country Code"
-                          className="w-16 bg-[#1F2C34] border border-[#2A3942] rounded-xl px-2.5 py-2 text-xs text-white text-center focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:outline-none font-mono"
-                          placeholder="+1"
-                        />
-                        <input
-                          type="tel"
-                          value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value)}
-                          aria-label="Phone Number"
-                          className="flex-1 bg-[#1F2C34] border border-[#2A3942] rounded-xl px-3 py-2 text-xs text-white focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:outline-none placeholder-[#8696A0] font-mono"
-                          placeholder="e.g. 5550192834"
-                          required
-                        />
-                      </div>
-                      <div className="flex items-center justify-between pt-1">
-                        <button
-                          type="submit"
-                          className="w-full bg-[#05A985] hover:bg-[#008f6f] active:bg-[#007a5e] text-white text-xs font-semibold py-2 px-4 rounded-xl transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:outline-none flex items-center justify-center gap-1.5"
-                        >
-                          <span>Generate 8-Digit Pairing Code</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <div className="space-y-3 text-center py-2">
-                      <p className="text-xs text-[#8696A0]">
-                        Enter this 8-digit code on your phone in WhatsApp:
-                      </p>
-                      <div className="text-2xl font-mono font-bold tracking-widest text-[#25D366] bg-[#1F2C34] py-2 px-4 rounded-xl border border-[#2A3942] inline-block">
-                        {phonePairingCode}
-                      </div>
-                      <p className="text-[11px] text-[#8696A0] leading-relaxed">
-                        Go to <strong className="text-white">WhatsApp &gt; Linked Devices &gt; Link with phone number</strong> and type this code.
-                      </p>
-                      <div className="pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setPhonePairingStep('input')}
-                          className="text-xs text-[#8696A0] hover:text-white underline transition-colors"
-                        >
-                          Change phone number
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                {/* Subheading: Connect in three steps */}
+                <div className="text-[11px] font-semibold tracking-wider text-[#788980] dark:text-[#8A9A91] uppercase mt-7 mb-3.5">
+                  Connect in three steps
                 </div>
-              )}
+
+                {/* 3 Numbered Steps with clean pill circles */}
+                <nav aria-label="WhatsApp Connection Steps">
+                  <ol className="space-y-4">
+                    {/* Step 01 */}
+                    <li className="flex items-start gap-3.5">
+                      <span
+                        aria-hidden="true"
+                        className="w-7 h-7 rounded-full bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] font-semibold text-xs flex items-center justify-center shrink-0 border border-[#DCE7E1]/80 dark:border-[#2D3D35]"
+                      >
+                        01
+                      </span>
+                      <div className="pt-0.5">
+                        <strong className="block text-sm font-semibold text-[#16231F] dark:text-[#F2F7F4]">
+                          Open WhatsApp
+                        </strong>
+                        <span className="text-xs text-[#5D7168] dark:text-[#8A9A91] block mt-0.5">
+                          Use WhatsApp on your phone.
+                        </span>
+                      </div>
+                    </li>
+
+                    {/* Step 02 */}
+                    <li className="flex items-start gap-3.5">
+                      <span
+                        aria-hidden="true"
+                        className="w-7 h-7 rounded-full bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] font-semibold text-xs flex items-center justify-center shrink-0 border border-[#DCE7E1]/80 dark:border-[#2D3D35]"
+                      >
+                        02
+                      </span>
+                      <div className="pt-0.5">
+                        <strong className="block text-sm font-semibold text-[#16231F] dark:text-[#F2F7F4]">
+                          Open Linked devices
+                        </strong>
+                        <span className="text-xs text-[#5D7168] dark:text-[#8A9A91] block mt-0.5">
+                          Find it in Menu or Settings.
+                        </span>
+                      </div>
+                    </li>
+
+                    {/* Step 03 */}
+                    <li className="flex items-start gap-3.5">
+                      <span
+                        aria-hidden="true"
+                        className="w-7 h-7 rounded-full bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] font-semibold text-xs flex items-center justify-center shrink-0 border border-[#DCE7E1]/80 dark:border-[#2D3D35]"
+                      >
+                        03
+                      </span>
+                      <div className="pt-0.5">
+                        <strong className="block text-sm font-semibold text-[#16231F] dark:text-[#F2F7F4]">
+                          Link a device
+                        </strong>
+                        <span className="text-xs text-[#5D7168] dark:text-[#8A9A91] block mt-0.5">
+                          Scan the code to connect.
+                        </span>
+                      </div>
+                    </li>
+                  </ol>
+                </nav>
+              </div>
+
+              {/* Bottom Supporting Row: Session Stays & Scheduling Control */}
+              <div className="mt-8 pt-6 border-t border-[#DCE7E1] dark:border-[#2D3D35] grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Group 1: Local Session */}
+                <div className="flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-[#E5F5EF] dark:bg-[#1D3830] flex items-center justify-center text-[#087F5B] dark:text-[#25C993] shrink-0 mt-0.5">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-semibold text-[#16231F] dark:text-[#F2F7F4]">
+                      Your session stays on your device
+                    </h2>
+                    <p className="text-[11px] text-[#5D7168] dark:text-[#8A9A91] leading-relaxed mt-0.5">
+                      Your messages and media remain private and secure.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Group 2: Scheduling Control */}
+                <div className="flex items-start gap-3 sm:border-l sm:border-[#DCE7E1] sm:dark:border-[#2D3D35] sm:pl-4">
+                  <div className="w-7 h-7 rounded-lg bg-[#E5F5EF] dark:bg-[#1D3830] flex items-center justify-center text-[#087F5B] dark:text-[#25C993] shrink-0 mt-0.5">
+                    <Code2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-semibold text-[#16231F] dark:text-[#F2F7F4]">
+                      Schedule with control
+                    </h2>
+                    <p className="text-[11px] text-[#5D7168] dark:text-[#8A9A91] leading-relaxed mt-0.5">
+                      Send messages and media at your preferred time, all from your device.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
             </div>
 
             {/* ----------------------------------------------------- */}
-            {/* RIGHT COLUMN (Desktop) / FIRST (Mobile): QR Panel     */}
+            {/* RIGHT COLUMN: Real Live QR Pairing Surface            */}
             {/* ----------------------------------------------------- */}
             <div className="w-full md:col-span-5 flex flex-col items-center">
               
-              {/* QR Container Card Tile (~310px width) */}
-              <div className="w-full max-w-[310px] bg-[#111B21] p-5 rounded-[22px] border border-[#2A3942] shadow-xl flex flex-col items-center">
+              {/* Pale Mint / Slate Box Container */}
+              <div className="w-full max-w-[340px] bg-[#F0F5F2] dark:bg-[#1E2B25] rounded-2xl p-6 sm:p-7 border border-[#DCE7E1]/80 dark:border-[#2D3D35] flex flex-col items-center justify-center text-center shadow-xs">
                 
-                {/* Visual Frame for the QR Code */}
+                {/* Real White QR Code Surface */}
                 <div
-                  className="relative w-[260px] h-[260px] bg-white p-3.5 rounded-2xl flex items-center justify-center shadow-inner overflow-hidden"
+                  className="relative w-[230px] h-[230px] bg-white p-3.5 rounded-xl border border-[#DCE7E1] dark:border-[#2D3D35] shadow-xs flex items-center justify-center overflow-hidden"
                   aria-live="polite"
                   aria-atomic="true"
                 >
                   {/* STATE 1: CONNECTED */}
                   {status.state === 'connected' ? (
-                    <div className="flex flex-col items-center gap-3 text-center p-2">
-                      <div className="w-16 h-16 rounded-full bg-[#05A985]/15 flex items-center justify-center text-[#05A985] animate-bounce motion-reduce:animate-none">
-                        <CheckCircle2 className="w-10 h-10" />
+                    <div className="flex flex-col items-center gap-2.5 text-center p-2">
+                      <div className="w-14 h-14 rounded-full bg-[#E5F5EF] dark:bg-[#1D3830] flex items-center justify-center text-[#087F5B] dark:text-[#25C993] animate-bounce motion-reduce:animate-none">
+                        <CheckCircle2 className="w-9 h-9" />
                       </div>
                       <div>
-                        <span className="text-base font-bold text-[#111B21] block">
+                        <span className="text-sm font-bold text-[#16231F] block">
                           Linked Successfully!
                         </span>
-                        <span className="text-xs text-[#54656F] font-mono mt-1 block">
+                        <span className="text-xs text-[#5D7168] font-mono mt-1 block">
                           {status.user?.id ? `ID: ${status.user.id}` : 'WhatsApp Session Active'}
                         </span>
                       </div>
                     </div>
                   ) : status.state === 'error' ? (
                     /* STATE 2: ERROR */
-                    <div className="flex flex-col items-center gap-2.5 text-center p-3">
-                      <AlertCircle className="w-10 h-10 text-[#EA4335]" />
-                      <span className="text-xs font-semibold text-[#111B21]">
+                    <div className="flex flex-col items-center gap-2 text-center p-2">
+                      <AlertCircle className="w-9 h-9 text-[#B42318] dark:text-[#FF938B]" />
+                      <span className="text-xs font-semibold text-[#16231F]">
                         Connection Interrupted
                       </span>
-                      <p className="text-[11px] text-[#667781] leading-tight">
-                        Check your device network connection and click reload.
+                      <p className="text-[11px] text-[#5D7168] leading-tight">
+                        Check your device connection and click reload.
                       </p>
                       <button
                         type="button"
                         onClick={handleManualRefresh}
-                        className="mt-1 bg-[#111B21] text-white text-xs font-medium px-3.5 py-1.5 rounded-lg hover:bg-[#202C33] transition-colors focus-visible:ring-2 focus-visible:ring-[#05A985]"
+                        className="mt-1 bg-[#087F5B] text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-[#06684B] transition-colors"
                       >
                         Retry Connection
                       </button>
                     </div>
                   ) : status.qrCodeUrl ? (
-                    /* STATE 3: QR CODE VISIBLE (Active or Expired) */
+                    /* STATE 3: REAL QR CODE (Active or Expired) */
                     <div className="relative w-full h-full flex items-center justify-center">
                       <img
                         src={status.qrCodeUrl}
                         alt="WhatsApp Pairing QR Code. Scan using WhatsApp Linked Devices on your phone."
                         className={`w-full h-full object-contain transition-all duration-300 ${
-                          isExpired ? 'blur-[5px] opacity-25 scale-95' : 'opacity-100 scale-100'
+                          isExpired ? 'blur-[4px] opacity-20 scale-95' : 'opacity-100 scale-100'
                         }`}
                       />
 
                       {/* EXPIRED OVERLAY */}
                       {isExpired && (
-                        <div className="absolute inset-0 bg-[#111B21]/80 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-4 text-center">
-                          <Clock className="w-8 h-8 text-[#FFBA08] mb-1.5" />
-                          <span className="text-xs font-bold text-white block">
-                            QR Code Expired
+                        <div className="absolute inset-0 bg-white/90 dark:bg-[#17211D]/90 backdrop-blur-xs rounded-lg flex flex-col items-center justify-center p-3 text-center">
+                          <Clock className="w-7 h-7 text-[#9A6700] dark:text-[#F3C969] mb-1" />
+                          <span className="text-xs font-bold text-[#16231F] dark:text-[#F2F7F4] block">
+                            Code Expired
                           </span>
-                          <span className="text-[10px] text-[#8696A0] mb-3 block">
-                            Codes refresh periodically for security
+                          <span className="text-[10px] text-[#788980] dark:text-[#8A9A91] mb-2.5 block">
+                            Codes refresh for your security
                           </span>
                           <button
                             type="button"
                             onClick={handleManualRefresh}
-                            className="bg-[#25D366] hover:bg-[#1EBE5D] text-[#111B21] text-xs font-bold px-4 py-2 rounded-xl shadow-lg flex items-center gap-1.5 transition-transform duration-150 hover:scale-105 active:scale-95 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+                            className="bg-[#087F5B] dark:bg-[#25C993] hover:bg-[#06684B] dark:hover:bg-[#46D9A6] text-white dark:text-[#0D3027] text-xs font-semibold px-3.5 py-1.5 rounded-lg shadow-xs flex items-center gap-1.5 transition-transform duration-150 hover:scale-105 active:scale-95"
                           >
                             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                            <span>Reload QR Code</span>
+                            <span>Reload Code</span>
                           </button>
                         </div>
                       )}
                     </div>
                   ) : status.state === 'connecting' ? (
                     /* STATE 4: LOADING / INITIALIZING SHIMMER */
-                    <div className="flex flex-col items-center justify-center gap-3 p-4 text-center">
-                      <RefreshCw className="w-8 h-8 text-[#05A985] animate-spin motion-reduce:animate-none" />
-                      <div className="space-y-1">
-                        <span className="text-xs font-semibold text-[#111B21] block">
-                          Generating secure session...
+                    <div className="flex flex-col items-center justify-center gap-2.5 p-3 text-center">
+                      <RefreshCw className="w-7 h-7 text-[#087F5B] dark:text-[#25C993] animate-spin motion-reduce:animate-none" />
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-semibold text-[#16231F] block">
+                          Generating pairing code...
                         </span>
-                        <span className="text-[10px] text-[#667781] block">
-                          Establishing end-to-end multi-device pairing
+                        <span className="text-[10px] text-[#5D7168] block">
+                          Connecting to WhatsApp multi-device
                         </span>
                       </div>
                     </div>
                   ) : (
                     /* STATE 5: STANDBY */
-                    <div className="flex flex-col items-center gap-2 text-[#54656F] text-center p-2">
-                      <QrCode className="w-12 h-12 text-[#8696A0]" />
+                    <div className="flex flex-col items-center gap-2 text-[#788980] text-center p-2">
+                      <QrCode className="w-10 h-10 text-[#788980]" />
                       <span className="text-xs font-medium">Ready to Pair</span>
                     </div>
                   )}
                 </div>
 
-                {/* Status Bar Below QR Code */}
-                <div className="mt-4 flex items-center justify-between w-full px-1 text-xs">
-                  {/* Status Indicator Pill */}
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        status.state === 'qr_ready' && !isExpired
-                          ? 'bg-[#25D366] animate-pulse motion-reduce:animate-none'
-                          : isExpired
-                          ? 'bg-[#FFBA08]'
-                          : 'bg-[#8696A0]'
-                      }`}
-                    />
-                    <span className="text-[#8696A0] font-medium text-[11px]">
-                      {status.state === 'qr_ready' && !isExpired
-                        ? `Valid for ${secondsLeft}s`
-                        : isExpired
-                        ? 'Expired'
-                        : status.state === 'connecting'
-                        ? 'Connecting...'
-                        : 'Standby'}
-                    </span>
-                  </div>
+                {/* Below QR: Countdown Timer */}
+                <div className="mt-4 flex items-center gap-1.5 text-xs text-[#087F5B] dark:text-[#25C993] font-medium">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>
+                    {status.state === 'qr_ready' && !isExpired
+                      ? `Code expires in ${secondsLeft} seconds`
+                      : isExpired
+                      ? 'Code expired'
+                      : 'Session connecting'}
+                  </span>
+                </div>
 
-                  {/* Manual Reload Button */}
+                {/* Below QR: Refresh Control Button */}
+                <div className="mt-2.5 w-full">
                   <button
                     type="button"
                     onClick={handleManualRefresh}
                     disabled={isRefreshing}
-                    className="flex items-center gap-1.5 text-xs text-[#05A985] hover:text-[#25D366] font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[#25D366] rounded px-1.5 py-0.5 focus-visible:outline-none disabled:opacity-50"
-                    title="Reload Pairing Session"
-                    aria-label="Reload pairing session"
+                    className="w-full bg-[#E5F5EF] hover:bg-[#D4ECE2] dark:bg-[#1D3830] dark:hover:bg-[#254A40] text-[#087F5B] dark:text-[#25C993] text-xs font-semibold py-2 px-4 rounded-xl transition-colors duration-150 shadow-2xs flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#087F5B] dark:focus-visible:ring-[#25C993] focus-visible:outline-none disabled:opacity-50"
                   >
-                    <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    <span>Reload</span>
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    <span>Refresh</span>
                   </button>
                 </div>
-              </div>
 
-              {/* Instructions reminder for mobile viewport */}
-              <div className="md:hidden mt-3 text-center">
-                <span className="text-[11px] text-[#8696A0]">
-                  Scan code with WhatsApp on your phone
+                {/* Small Helper Text */}
+                <span className="text-[11px] text-[#788980] dark:text-[#8A9A91] mt-2 block">
+                  Scan with WhatsApp
                 </span>
               </div>
+
             </div>
 
-          </div>
-
-          {/* ======================================================= */}
-          {/* 3. EXPANDABLE HELP ACCORDION ("How to unlink anytime")   */}
-          {/* ======================================================= */}
-          <div className="mt-8 pt-6 border-t border-[#2A3942]/80 space-y-3">
-            {/* Accordion 1: How to Unlink Anytime */}
-            <div className="bg-[#111B21] rounded-2xl border border-[#2A3942] overflow-hidden">
-              <button
-                type="button"
-                onClick={() => toggleAccordion('unlink')}
-                aria-expanded={activeHelpAccordion === 'unlink'}
-                className="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-[#1F2C34]/50 transition-colors focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:outline-none"
-              >
-                <div className="flex items-center gap-2.5">
-                  <LogOut className="w-4 h-4 text-[#05A985]" />
-                  <span className="text-xs sm:text-sm font-semibold text-[#E9EDEF]">
-                    How to unlink or revoke access anytime
-                  </span>
-                </div>
-                {activeHelpAccordion === 'unlink' ? (
-                  <ChevronUp className="w-4 h-4 text-[#8696A0]" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-[#8696A0]" />
-                )}
-              </button>
-
-              {activeHelpAccordion === 'unlink' && (
-                <div className="px-4 pb-4 pt-1 text-xs text-[#8696A0] space-y-2 border-t border-[#2A3942]/60">
-                  <p className="leading-relaxed">
-                    You have total control over your WhatsApp session at all times. You can terminate this connection from your phone in 5 seconds:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-1.5 pl-1 text-[#D1D7DB]">
-                    <li>Open WhatsApp on your primary phone</li>
-                    <li>Go to <strong className="text-white">Settings</strong> (or 3-dot Menu) &gt; <strong className="text-white">Linked Devices</strong></li>
-                    <li>Locate <strong className="text-white">WhatsSchedule</strong> in your active devices list</li>
-                    <li>Tap it and select <strong className="text-[#EA4335]">Log Out</strong></li>
-                  </ol>
-                  <p className="text-[11px] text-[#8696A0] pt-1">
-                    Once logged out, this app will instantly lose all access and cannot send any scheduled messages until re-authorized by scanning a new QR code.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Accordion 2: Need Help Linking? */}
-            <div className="bg-[#111B21] rounded-2xl border border-[#2A3942] overflow-hidden">
-              <button
-                type="button"
-                onClick={() => toggleAccordion('troubleshoot')}
-                aria-expanded={activeHelpAccordion === 'troubleshoot'}
-                className="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-[#1F2C34]/50 transition-colors focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:outline-none"
-              >
-                <div className="flex items-center gap-2.5">
-                  <HelpCircle className="w-4 h-4 text-[#05A985]" />
-                  <span className="text-xs sm:text-sm font-semibold text-[#E9EDEF]">
-                    Need help linking? Troubleshooting checklist
-                  </span>
-                </div>
-                {activeHelpAccordion === 'troubleshoot' ? (
-                  <ChevronUp className="w-4 h-4 text-[#8696A0]" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-[#8696A0]" />
-                )}
-              </button>
-
-              {activeHelpAccordion === 'troubleshoot' && (
-                <div className="px-4 pb-4 pt-1 text-xs text-[#8696A0] space-y-2 border-t border-[#2A3942]/60">
-                  <ul className="list-disc list-inside space-y-1.5 pl-1 text-[#D1D7DB]">
-                    <li>Ensure your computer and mobile phone have an active, stable internet connection.</li>
-                    <li>Increase your computer screen brightness if the camera is having difficulty reading the QR code.</li>
-                    <li>Make sure you have updated WhatsApp to the latest version on iOS App Store or Google Play Store.</li>
-                    <li>If the code says expired, tap the green <strong className="text-white">Reload</strong> button above.</li>
-                  </ul>
-                </div>
-              )}
-            </div>
           </div>
 
         </div>
 
         {/* ======================================================= */}
-        {/* 4. QUIET CENTERED FOOTER                                */}
+        {/* 3. BOTTOM BAR BELOW THE CARD                            */}
         {/* ======================================================= */}
-        <footer
-          role="contentinfo"
-          className="mt-6 text-center text-xs text-[#8696A0] space-y-2"
-        >
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px]">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#788980] dark:text-[#8A9A91] mt-5 px-3">
+          {/* Left: GitHub Link & Disclaimer */}
+          <div className="flex items-center gap-2 text-center sm:text-left">
             <a
               href="https://github.com/AroonKumarr/whatschedule"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-white transition-colors underline focus-visible:ring-1 focus-visible:ring-[#25D366] rounded"
+              className="text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#087F5B] dark:hover:text-[#25C993] transition-colors focus-visible:ring-2 focus-visible:ring-[#087F5B] rounded"
+              aria-label="View source code on GitHub"
             >
-              GitHub Repository
+              <ExternalLink className="w-3.5 h-3.5 inline mr-1" />
+              <span>Independent open-source software. Not affiliated with or endorsed by WhatsApp or Meta.</span>
             </a>
-            <span aria-hidden="true" className="text-[#2A3942]">•</span>
-            <span className="hover:text-white transition-colors cursor-pointer">
-              Privacy & Local Storage Policy
-            </span>
-            <span aria-hidden="true" className="text-[#2A3942]">•</span>
-            <span className="hover:text-white transition-colors cursor-pointer">
-              Terms of Use
-            </span>
-            <span aria-hidden="true" className="text-[#2A3942]">•</span>
-            <span className="text-[#8696A0]">
-              Version 1.0.0 Stable
-            </span>
           </div>
 
-          <p className="text-[11px] text-[#8696A0]">
-            © {new Date().getFullYear()} Aroon Kumar. All rights reserved.
-          </p>
-        </footer>
+          {/* Right: Phone Number Pairing Option */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowPhonePairing(true)}
+              className="text-[#087F5B] dark:text-[#25C993] hover:underline font-medium inline-flex items-center gap-1.5 transition-colors focus-visible:ring-2 focus-visible:ring-[#087F5B] rounded px-1 focus-visible:outline-none"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              <span>Link with phone number instead</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </main>
+
+      {/* ========================================================= */}
+      {/* 4. EXPANDABLE PHONE PAIRING MODAL                         */}
+      {/* ========================================================= */}
+      {showPhonePairing && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="phone-modal-title"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div className="bg-white dark:bg-[#17211D] rounded-2xl border border-[#DCE7E1] dark:border-[#2D3D35] p-6 max-w-md w-full shadow-xl space-y-4 relative">
+            <button
+              type="button"
+              onClick={() => {
+                setShowPhonePairing(false);
+                setPhonePairingStep('input');
+              }}
+              className="absolute top-4 right-4 text-[#788980] hover:text-[#16231F] dark:hover:text-[#F2F7F4] p-1 rounded-lg"
+              aria-label="Close dialog"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-[#E5F5EF] dark:bg-[#1D3830] flex items-center justify-center text-[#087F5B] dark:text-[#25C993]">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 id="phone-modal-title" className="text-sm font-bold text-[#16231F] dark:text-[#F2F7F4]">
+                  Link with Phone Number
+                </h3>
+                <span className="text-[11px] text-[#5D7168] dark:text-[#8A9A91]">
+                  Alternative multi-device verification
+                </span>
+              </div>
+            </div>
+
+            {phonePairingStep === 'input' ? (
+              <form onSubmit={handlePhonePairingSubmit} className="space-y-3 pt-2">
+                <p className="text-xs text-[#5D7168] dark:text-[#B2C1B8] leading-relaxed">
+                  Enter your international WhatsApp phone number to generate an 8-character verification code:
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    aria-label="Country Code"
+                    className="w-16 bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl px-2.5 py-2 text-xs text-[#16231F] dark:text-[#F2F7F4] text-center font-mono focus-visible:ring-2 focus-visible:ring-[#087F5B] dark:focus-visible:ring-[#25C993] focus-visible:outline-none"
+                    placeholder="+1"
+                  />
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    aria-label="Phone Number"
+                    className="flex-1 bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl px-3 py-2 text-xs text-[#16231F] dark:text-[#F2F7F4] font-mono focus-visible:ring-2 focus-visible:ring-[#087F5B] dark:focus-visible:ring-[#25C993] focus-visible:outline-none placeholder-[#788980]"
+                    placeholder="e.g. 5550192834"
+                    required
+                  />
+                </div>
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="w-full bg-[#087F5B] hover:bg-[#06684B] dark:bg-[#25C993] dark:hover:bg-[#46D9A6] text-white dark:text-[#0D3027] text-xs font-semibold py-2.5 px-4 rounded-xl transition-colors duration-150 flex items-center justify-center gap-1.5 shadow-xs"
+                  >
+                    <span>Generate Verification Code</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-3 text-center py-2">
+                <p className="text-xs text-[#5D7168] dark:text-[#B2C1B8]">
+                  Enter this code on your phone in WhatsApp:
+                </p>
+                <div className="text-2xl font-mono font-bold tracking-widest text-[#087F5B] dark:text-[#25C993] bg-[#E5F5EF] dark:bg-[#1D3830] py-2.5 px-4 rounded-xl border border-[#DCE7E1] dark:border-[#2D3D35] inline-block">
+                  {phonePairingCode}
+                </div>
+                <p className="text-[11px] text-[#5D7168] dark:text-[#8A9A91] leading-relaxed">
+                  Go to <strong className="text-[#16231F] dark:text-[#F2F7F4]">WhatsApp &gt; Linked Devices &gt; Link with phone number</strong> and type this code.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPhonePairingStep('input')}
+                  className="text-xs text-[#5D7168] dark:text-[#8A9A91] hover:underline pt-1 block mx-auto"
+                >
+                  Change phone number
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Footer spacer */}
+      <footer className="w-full text-center text-[11px] text-[#788980] dark:text-[#8A9A91] pt-4">
+        © {new Date().getFullYear()} Aroon Kumar. All rights reserved.
+      </footer>
     </div>
   );
 };

@@ -188,211 +188,205 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 select-none">
-      {/* 100% WhatsApp Dark Container (Zero White Popups) */}
-      <div className="bg-[#202c33] border border-[#2a3942] rounded-2xl w-full max-w-xl shadow-2xl flex flex-col max-h-[94vh] overflow-hidden text-[#e9edef]">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 select-none">
+      {/* Light & Dark Adaptive Modal Shell */}
+      <div className="bg-white dark:bg-[#17211D] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-2xl w-full max-w-xl shadow-xl flex flex-col max-h-[94vh] overflow-hidden text-[#16231F] dark:text-[#F2F7F4] transition-colors duration-150">
         
         {/* Header */}
-        <div className="px-6 py-4 bg-[#111b21] border-b border-[#222d34] flex items-center justify-between">
+        <div className="px-6 py-4 bg-[#F0F5F2] dark:bg-[#1E2B25] border-b border-[#DCE7E1] dark:border-[#2D3D35] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-[#00a884]/20 rounded-xl text-[#00a884]">
+            <div className="p-2.5 bg-[#E5F5EF] dark:bg-[#1D3830] rounded-xl text-[#087F5B] dark:text-[#25C993]">
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-[#e9edef]">Schedule Message / Media</h3>
-              <p className="text-xs text-[#8696a0]">Dispatches automatically in the background</p>
+              <h2 className="text-base font-bold text-[#16231F] dark:text-[#F2F7F4]">
+                Schedule WhatsApp Message
+              </h2>
+              <p className="text-xs text-[#5D7168] dark:text-[#8A9A91]">
+                Dispatches automatically via WhatsApp multi-device
+              </p>
             </div>
           </div>
+
           <button
             onClick={onClose}
-            className="p-2 text-[#8696a0] hover:text-[#e9edef] rounded-full hover:bg-[#202c33] transition-colors"
+            className="p-1.5 text-[#788980] hover:text-[#16231F] dark:hover:text-[#F2F7F4] rounded-lg transition-colors"
+            title="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
           {error && (
-            <div className="p-3 bg-[#ea4335]/15 border border-[#ea4335]/30 rounded-xl text-xs text-[#ea4335]">
+            <div className="p-3 bg-[#B42318]/10 dark:bg-[#FF938B]/15 border border-[#B42318]/20 dark:border-[#FF938B]/30 rounded-xl text-xs text-[#B42318] dark:text-[#FF938B] font-medium">
               {error}
             </div>
           )}
 
-          {/* Contact Selector (Contacts at Top for 1-Tap Ease) */}
+          {/* Recipient Selection Mode */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-[#8696a0]">
-                Select Recipient
-              </label>
-              <div className="flex rounded-lg bg-[#111b21] p-0.5 border border-[#2a3942] text-xs">
-                <button
-                  type="button"
-                  onClick={() => setContactMode('contacts')}
-                  className={`px-3 py-1 rounded-md transition-colors ${
-                    contactMode === 'contacts'
-                      ? 'bg-[#00a884] text-white font-medium'
-                      : 'text-[#8696a0] hover:text-white'
-                  }`}
-                >
-                  WhatsApp Contacts ({contacts.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setContactMode('direct')}
-                  className={`px-3 py-1 rounded-md transition-colors ${
-                    contactMode === 'direct'
-                      ? 'bg-[#00a884] text-white font-medium'
-                      : 'text-[#8696a0] hover:text-white'
-                  }`}
-                >
-                  Enter Phone Number
-                </button>
-              </div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[#788980] dark:text-[#8A9A91] mb-2">
+              Recipient
+            </label>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => setContactMode('contacts')}
+                className={`py-2 px-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-colors ${
+                  contactMode === 'contacts'
+                    ? 'bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] border-[#087F5B]/30 dark:border-[#25C993]/30'
+                    : 'bg-[#F6F9F7] dark:bg-[#101815] text-[#5D7168] dark:text-[#8A9A91] border-[#DCE7E1] dark:border-[#2D3D35]'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>From Contacts ({contacts.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setContactMode('direct')}
+                className={`py-2 px-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-colors ${
+                  contactMode === 'direct'
+                    ? 'bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] border-[#087F5B]/30 dark:border-[#25C993]/30'
+                    : 'bg-[#F6F9F7] dark:bg-[#101815] text-[#5D7168] dark:text-[#8A9A91] border-[#DCE7E1] dark:border-[#2D3D35]'
+                }`}
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span>Direct Phone Number</span>
+              </button>
             </div>
 
+            {/* Mode 1: Contact Picker */}
             {contactMode === 'contacts' ? (
               <div className="space-y-2">
                 <div className="relative">
-                  <Search className="w-4 h-4 text-[#8696a0] absolute left-3 top-3" />
+                  <Search className="w-4 h-4 text-[#788980] absolute left-3 top-2.5" />
                   <input
                     type="text"
-                    placeholder="Search synced contacts by name or number..."
+                    placeholder="Search synced contacts..."
                     value={contactSearch}
                     onChange={(e) => setContactSearch(e.target.value)}
-                    className="w-full bg-[#111b21] border border-[#2a3942] rounded-xl pl-9 pr-3 py-2 text-xs text-[#e9edef] placeholder-[#8696a0] focus:outline-none focus:border-[#00a884]"
+                    className="w-full bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl pl-9 pr-3 py-2 text-xs text-[#16231F] dark:text-[#F2F7F4] placeholder-[#788980] focus:outline-none focus:border-[#087F5B] dark:focus:border-[#25C993]"
                   />
                 </div>
 
-                {/* Scrollable Contact Picker List */}
-                <div className="max-h-40 overflow-y-auto bg-[#111b21] rounded-xl border border-[#2a3942] divide-y divide-[#222d34]/60">
+                <div className="max-h-36 overflow-y-auto divide-y divide-[#DCE7E1] dark:divide-[#2D3D35] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl bg-[#F6F9F7] dark:bg-[#101815]">
                   {filteredContacts.length === 0 ? (
-                    <div className="p-4 text-center text-xs text-[#8696a0]">
-                      {contacts.length === 0
-                        ? 'No contacts synced yet. You can use "Enter Phone Number" tab to message anyone!'
-                        : 'No contacts match your search.'}
+                    <div className="p-3 text-center text-xs text-[#788980]">
+                      No contacts found matching search.
                     </div>
                   ) : (
-                    filteredContacts.map((c) => {
-                      const isSelected = selectedContactJid === c.id;
-                      return (
-                        <div
-                          key={c.id}
-                          onClick={() => setSelectedContactJid(c.id)}
-                          className={`p-2.5 flex items-center justify-between cursor-pointer transition-colors ${
-                            isSelected ? 'bg-[#005c4b]/50' : 'hover:bg-[#202c33]'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 truncate">
-                            <div className="w-8 h-8 rounded-full bg-[#202c33] border border-[#2a3942] flex items-center justify-center text-xs font-bold text-white shrink-0">
-                              {c.name ? c.name.charAt(0).toUpperCase() : '#'}
-                            </div>
-                            <div className="truncate">
-                              <span className="text-xs font-medium text-[#e9edef] block truncate">
-                                {c.name || c.number}
-                              </span>
-                              <span className="text-[10px] text-[#8696a0]">{c.number}</span>
-                            </div>
-                          </div>
-                          {isSelected && <Check className="w-4 h-4 text-[#25D366] shrink-0" />}
+                    filteredContacts.map((c) => (
+                      <div
+                        key={c.id}
+                        onClick={() => setSelectedContactJid(c.id)}
+                        className={`p-2.5 flex items-center justify-between cursor-pointer text-xs transition-colors ${
+                          selectedContactJid === c.id
+                            ? 'bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] font-semibold'
+                            : 'hover:bg-[#F0F5F2] dark:hover:bg-[#1E2B25] text-[#16231F] dark:text-[#F2F7F4]'
+                        }`}
+                      >
+                        <div className="truncate">
+                          <span className="block font-medium truncate">{c.name || c.number}</span>
+                          <span className="text-[10px] text-[#788980] dark:text-[#8A9A91]">{c.number}</span>
                         </div>
-                      );
-                    })
+                        {selectedContactJid === c.id && <Check className="w-4 h-4 text-[#087F5B] dark:text-[#25C993]" />}
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
             ) : (
+              /* Mode 2: Direct Number Input */
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <select
                     value={countryCode}
                     onChange={(e) => setCountryCode(e.target.value)}
-                    className="bg-[#111b21] border border-[#2a3942] rounded-xl px-2.5 py-2.5 text-xs text-[#e9edef] focus:outline-none focus:border-[#00a884]"
+                    className="w-36 bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl p-2.5 text-xs text-[#16231F] dark:text-[#F2F7F4] focus:outline-none focus:border-[#087F5B] dark:focus:border-[#25C993]"
                   >
-                    {COUNTRY_CODES.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {c.code} ({c.country})
+                    {COUNTRY_CODES.map((item) => (
+                      <option key={item.code} value={item.code}>
+                        {item.code} ({item.country})
                       </option>
                     ))}
                   </select>
-                  <div className="relative flex-1">
-                    <Phone className="w-4 h-4 text-[#8696a0] absolute left-3 top-3" />
-                    <input
-                      type="tel"
-                      placeholder="e.g. 9876543210"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="w-full bg-[#111b21] border border-[#2a3942] rounded-xl pl-9 pr-3 py-2.5 text-sm text-[#e9edef] placeholder-[#8696a0] focus:outline-none focus:border-[#00a884]"
-                    />
-                  </div>
-                </div>
-                <div className="relative">
-                  <User className="w-4 h-4 text-[#8696a0] absolute left-3 top-3" />
+
                   <input
-                    type="text"
-                    placeholder="Contact Name (e.g. HR / Manager / Client)"
-                    value={recipientName}
-                    onChange={(e) => setRecipientName(e.target.value)}
-                    className="w-full bg-[#111b21] border border-[#2a3942] rounded-xl pl-9 pr-3 py-2 text-xs text-[#e9edef] placeholder-[#8696a0] focus:outline-none focus:border-[#00a884]"
+                    type="tel"
+                    placeholder="Mobile Number (without leading 0)"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="flex-1 bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl p-2.5 text-xs text-[#16231F] dark:text-[#F2F7F4] placeholder-[#788980] focus:outline-none focus:border-[#087F5B] dark:focus:border-[#25C993]"
+                    required
                   />
                 </div>
+                <input
+                  type="text"
+                  placeholder="Recipient Name (e.g. HR Manager / Client)"
+                  value={recipientName}
+                  onChange={(e) => setRecipientName(e.target.value)}
+                  className="w-full bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl p-2.5 text-xs text-[#16231F] dark:text-[#F2F7F4] placeholder-[#788980] focus:outline-none focus:border-[#087F5B] dark:focus:border-[#25C993]"
+                />
               </div>
             )}
           </div>
 
-          {/* Schedule Date & Time (Dark styled, no white calendar flash) */}
+          {/* Schedule Date & Time Selection with Instant Presets */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[#8696a0] mb-2">
-              Delivery Date & Time
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[#788980] dark:text-[#8A9A91] mb-2">
+              Dispatch Date & Time
             </label>
 
-            {/* Quick 1-Tap Presets */}
+            {/* Quick Presets */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2.5 text-xs">
               <button
                 type="button"
                 onClick={() => applyPreset('15m')}
-                className="py-2 px-3 bg-[#111b21] hover:bg-[#2a3942] border border-[#2a3942] rounded-xl text-[#d1d7db] transition-colors font-medium text-center"
+                className="py-2 px-3 bg-[#F0F5F2] hover:bg-[#E5F5EF] dark:bg-[#1E2B25] dark:hover:bg-[#253931] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl text-[#16231F] dark:text-[#F2F7F4] transition-colors font-medium text-center"
               >
                 +15 Mins
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('1h')}
-                className="py-2 px-3 bg-[#111b21] hover:bg-[#2a3942] border border-[#2a3942] rounded-xl text-[#d1d7db] transition-colors font-medium text-center"
+                className="py-2 px-3 bg-[#F0F5F2] hover:bg-[#E5F5EF] dark:bg-[#1E2B25] dark:hover:bg-[#253931] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl text-[#16231F] dark:text-[#F2F7F4] transition-colors font-medium text-center"
               >
                 +1 Hour
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('tomorrow9am')}
-                className="py-2 px-3 bg-[#00a884]/20 border border-[#00a884]/50 text-[#25D366] font-semibold rounded-xl hover:bg-[#00a884]/30 transition-colors text-center"
+                className="py-2 px-3 bg-[#E5F5EF] dark:bg-[#1D3830] border border-[#087F5B]/30 dark:border-[#25C993]/40 text-[#087F5B] dark:text-[#25C993] font-semibold rounded-xl hover:bg-[#D4ECE2] dark:hover:bg-[#254A40] transition-colors text-center"
               >
                 Tomorrow 9am
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('tomorrow9pm')}
-                className="py-2 px-3 bg-[#111b21] hover:bg-[#2a3942] border border-[#2a3942] rounded-xl text-[#d1d7db] transition-colors font-medium text-center"
+                className="py-2 px-3 bg-[#F0F5F2] hover:bg-[#E5F5EF] dark:bg-[#1E2B25] dark:hover:bg-[#253931] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl text-[#16231F] dark:text-[#F2F7F4] transition-colors font-medium text-center"
               >
                 Tomorrow 9pm
               </button>
             </div>
 
-            {/* Dark Styled Datetime Input */}
+            {/* Adaptive Datetime Input */}
             <input
               type="datetime-local"
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
-              className="w-full bg-[#111b21] border border-[#2a3942] rounded-xl p-3 text-sm text-[#e9edef] focus:outline-none focus:border-[#00a884] [color-scheme:dark]"
+              className="w-full bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl p-3 text-sm text-[#16231F] dark:text-[#F2F7F4] focus:outline-none focus:border-[#087F5B] dark:focus:border-[#25C993]"
             />
           </div>
 
-          {/* Media & Document Attachment (Supports iPhone HEIC, MOV, Audio, PDF) */}
+          {/* Media & Document Attachment */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[#8696a0] mb-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[#788980] dark:text-[#8A9A91] mb-2">
               Attach Video, Photo or Document (Optional)
             </label>
-            <div className="border-2 border-dashed border-[#2a3942] hover:border-[#00a884]/70 bg-[#111b21] rounded-2xl p-4 text-center transition-colors relative">
+            <div className="border-2 border-dashed border-[#DCE7E1] dark:border-[#2D3D35] hover:border-[#087F5B]/70 dark:hover:border-[#25C993]/70 bg-[#F6F9F7] dark:bg-[#101815] rounded-2xl p-4 text-center transition-colors relative">
               <input
                 type="file"
                 id="media-upload"
@@ -401,11 +395,11 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
               {selectedFile ? (
-                <div className="flex items-center justify-between bg-[#202c33] p-3 rounded-xl text-xs">
+                <div className="flex items-center justify-between bg-[#F0F5F2] dark:bg-[#1E2B25] p-3 rounded-xl text-xs">
                   <div className="flex items-center gap-2.5 truncate">
-                    <FileText className="w-5 h-5 text-[#00a884] shrink-0" />
-                    <span className="truncate font-medium">{selectedFile.name}</span>
-                    <span className="text-[#8696a0]">
+                    <FileText className="w-5 h-5 text-[#087F5B] dark:text-[#25C993] shrink-0" />
+                    <span className="truncate font-semibold">{selectedFile.name}</span>
+                    <span className="text-[#788980] dark:text-[#8A9A91]">
                       ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)
                     </span>
                   </div>
@@ -415,18 +409,18 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
                       e.preventDefault();
                       setSelectedFile(null);
                     }}
-                    className="p-1 hover:text-[#ea4335] text-[#8696a0]"
+                    className="p-1 hover:text-[#B42318] text-[#788980]"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-1.5 text-xs text-[#8696a0]">
-                  <Upload className="w-6 h-6 text-[#00a884]" />
+                <div className="flex flex-col items-center gap-1.5 text-xs text-[#788980] dark:text-[#8A9A91]">
+                  <Upload className="w-6 h-6 text-[#087F5B] dark:text-[#25C993]" />
                   <span>
-                    <strong className="text-[#d1d7db]">Tap to upload</strong> or drag & drop files
+                    <strong className="text-[#16231F] dark:text-[#F2F7F4]">Tap to upload</strong> or drag & drop files
                   </span>
-                  <span className="text-[11px] text-[#8696a0]">
+                  <span className="text-[11px] text-[#788980] dark:text-[#8A9A91]">
                     iPhone Photos (.heic, .png), HD Videos (.mov, .mp4), Voice Memos (.m4a), Documents (.pdf)
                   </span>
                 </div>
@@ -437,19 +431,19 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
           {/* Message Content with Live Counter & AI Assistant */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-[#8696a0]">
+              <label className="text-xs font-semibold uppercase tracking-wider text-[#788980] dark:text-[#8A9A91]">
                 Message Text / Caption
               </label>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setShowAiPrompt(!showAiPrompt)}
-                  className="text-xs text-[#00a884] hover:text-[#25D366] font-medium flex items-center gap-1 transition-colors"
+                  className="text-xs text-[#087F5B] dark:text-[#25C993] hover:underline font-semibold flex items-center gap-1 transition-colors"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>AI Assist Draft</span>
                 </button>
-                <span className={`text-[11px] font-mono ${content.length > 4000 ? 'text-[#e5a800]' : 'text-[#8696a0]'}`}>
+                <span className={`text-[11px] font-mono ${content.length > 4000 ? 'text-[#9A6700] dark:text-[#F3C969]' : 'text-[#788980] dark:text-[#8A9A91]'}`}>
                   {content.length.toLocaleString()} / {MAX_CHAR_LIMIT.toLocaleString()} chars
                 </span>
               </div>
@@ -457,7 +451,7 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
 
             {/* AI Prompt Input Bar */}
             {showAiPrompt && (
-              <div className="mb-2.5 p-2.5 bg-[#111b21] rounded-xl border border-[#00a884]/40 flex items-center gap-2">
+              <div className="mb-2.5 p-2.5 bg-[#F0F5F2] dark:bg-[#1E2B25] rounded-xl border border-[#087F5B]/30 dark:border-[#25C993]/30 flex items-center gap-2">
                 <input
                   type="text"
                   placeholder="e.g. Follow up with HR about salary slip politely..."
@@ -469,13 +463,13 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
                       handleAiDraft();
                     }
                   }}
-                  className="flex-1 bg-transparent text-xs text-white placeholder-[#8696a0] focus:outline-none"
+                  className="flex-1 bg-transparent text-xs text-[#16231F] dark:text-[#F2F7F4] placeholder-[#788980] focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={handleAiDraft}
                   disabled={isAiGenerating || !aiPromptInput.trim()}
-                  className="px-3 py-1 bg-[#00a884] hover:bg-[#02bd94] disabled:opacity-50 text-white rounded-lg text-xs font-medium"
+                  className="px-3 py-1 bg-[#087F5B] hover:bg-[#06684B] dark:bg-[#25C993] dark:hover:bg-[#46D9A6] disabled:opacity-50 text-white dark:text-[#0D3027] rounded-lg text-xs font-semibold"
                 >
                   {isAiGenerating ? 'Drafting...' : 'Generate'}
                 </button>
@@ -488,20 +482,20 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
               placeholder="Type your scheduled message here..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full bg-[#111b21] border border-[#2a3942] rounded-xl p-3 text-sm text-[#e9edef] placeholder-[#8696a0] focus:outline-none focus:border-[#00a884] resize-none"
+              className="w-full bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl p-3 text-sm text-[#16231F] dark:text-[#F2F7F4] placeholder-[#788980] focus:outline-none focus:border-[#087F5B] dark:focus:border-[#25C993] resize-none"
             />
           </div>
 
           {/* Compliance & Consent Confirmation */}
-          <div className="bg-[#111b21] p-3 rounded-xl border border-[#2a3942]/60">
-            <label className="flex items-start gap-2.5 cursor-pointer text-xs text-[#d1d7db]">
+          <div className="bg-[#F0F5F2] dark:bg-[#1E2B25] p-3 rounded-xl border border-[#DCE7E1] dark:border-[#2D3D35]">
+            <label className="flex items-start gap-2.5 cursor-pointer text-xs text-[#16231F] dark:text-[#F2F7F4]">
               <input
                 type="checkbox"
                 checked={hasConsent}
                 onChange={(e) => setHasConsent(e.target.checked)}
-                className="mt-0.5 rounded border-[#3b4a54] bg-[#202c33] text-[#00a884] focus:ring-0"
+                className="mt-0.5 rounded border-[#DCE7E1] dark:border-[#2D3D35] text-[#087F5B] dark:text-[#25C993] focus:ring-0"
               />
-              <span className="leading-relaxed text-[11px] text-[#8696a0]">
+              <span className="leading-relaxed text-[11px] text-[#5D7168] dark:text-[#8A9A91]">
                 I confirm I have prior consent or a legitimate personal/business relationship with this recipient. (Anti-Spam & PECA/GDPR compliance).
               </span>
             </label>
@@ -512,7 +506,7 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3.5 bg-[#00a884] hover:bg-[#02bd94] disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-transform active:scale-[0.99] shadow-lg flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-[#087F5B] hover:bg-[#06684B] dark:bg-[#25C993] dark:hover:bg-[#46D9A6] disabled:opacity-50 text-white dark:text-[#0D3027] font-semibold rounded-xl text-sm transition-transform active:scale-[0.99] shadow-xs flex items-center justify-center gap-2"
             >
               {isSubmitting ? (
                 <span>Scheduling in Local Queue...</span>

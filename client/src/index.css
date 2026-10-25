@@ -2,26 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-page-bg: #F6F9F7;
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F0F5F2;
+  --color-text-primary: #16231F;
+  --color-text-secondary: #5D7168;
+  --color-text-muted: #788980;
+  --color-border: #DCE7E1;
+  --color-primary-btn: #087F5B;
+  --color-primary-btn-hover: #06684B;
+  --color-primary-btn-text: #FFFFFF;
+  --color-accent-subtle: #E5F5EF;
+  --color-focus: #087F5B;
+
+  --color-semantic-success: #16865D;
+  --color-semantic-warning: #9A6700;
+  --color-semantic-error: #B42318;
+  --color-semantic-info: #2867A8;
+}
+
+.dark {
+  --color-page-bg: #101815;
+  --color-surface: #17211D;
+  --color-surface-secondary: #1E2B25;
+  --color-text-primary: #F2F7F4;
+  --color-text-secondary: #B2C1B8;
+  --color-text-muted: #8A9A91;
+  --color-border: #2D3D35;
+  --color-primary-btn: #25C993;
+  --color-primary-btn-hover: #46D9A6;
+  --color-primary-btn-text: #0D3027;
+  --color-accent-subtle: #1D3830;
+  --color-focus: #46D9A6;
+
+  --color-semantic-success: #3DD39C;
+  --color-semantic-warning: #F3C969;
+  --color-semantic-error: #FF938B;
+  --color-semantic-info: #8BBEFF;
+}
+
 @layer base {
   body {
     @apply font-sans antialiased transition-colors duration-150 ease-out;
+    background-color: var(--color-page-bg);
+    color: var(--color-text-primary);
   }
 }
 
-/* WhatsApp Doodle Backgrounds */
+/* Chat Backgrounds */
 .dark .wa-chat-bg {
-  background-color: #0b141a;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 0);
+  background-color: #101815;
+  background-image: radial-gradient(rgba(37, 201, 147, 0.04) 1px, transparent 0);
   background-size: 24px 24px;
 }
 
 .wa-chat-bg {
-  background-color: #efeae2;
-  background-image: radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 0);
+  background-color: #F6F9F7;
+  background-image: radial-gradient(rgba(8, 127, 91, 0.05) 1px, transparent 0);
   background-size: 24px 24px;
 }
 
-/* Custom sleek WhatsApp scrollbar */
+/* Custom sleek scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -32,15 +74,15 @@
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(134, 150, 160, 0.25);
+  background: rgba(138, 154, 145, 0.25);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(102, 119, 129, 0.3);
+  background: rgba(93, 113, 104, 0.25);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(134, 150, 160, 0.5);
+  background: rgba(138, 154, 145, 0.5);
 }

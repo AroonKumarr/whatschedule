@@ -197,13 +197,13 @@ export const App: React.FC = () => {
 
   if (!authChecked) {
     return (
-      <div className="h-screen w-screen bg-[#0c1317] flex items-center justify-center text-[#8696a0] text-sm">
+      <div className="h-screen w-screen bg-[#F6F9F7] dark:bg-[#101815] flex items-center justify-center text-[#5D7168] dark:text-[#8A9A91] text-sm font-medium">
         Initializing Security Environment...
       </div>
     );
   }
 
-  // 1. Master PIN Security Lock (Protects from other Chrome profiles & unauthorized users)
+  // 1. Master PIN Security Lock (Protects from unauthorized users)
   if (!authStatus.isUnlocked) {
     return (
       <PinLockScreen
@@ -217,6 +217,8 @@ export const App: React.FC = () => {
         onSuccess={() => {
           setAuthStatus({ isPinSet: true, isUnlocked: true });
         }}
+        themeMode={themeMode}
+        onToggleTheme={toggleTheme}
       />
     );
   }
@@ -231,6 +233,8 @@ export const App: React.FC = () => {
             await api.logout();
           } catch (e) {}
         }}
+        themeMode={themeMode}
+        onToggleTheme={toggleTheme}
       />
     );
   }
@@ -238,7 +242,7 @@ export const App: React.FC = () => {
   const selectedMessage = schedules.find((s) => s.id === selectedId) || null;
 
   return (
-    <div className="h-screen w-screen overflow-hidden flex bg-[#0c1317]">
+    <div className="h-screen w-screen overflow-hidden flex bg-[#F6F9F7] dark:bg-[#101815] transition-colors duration-150">
       {/* WhatsApp Web Left Sidebar */}
       <Sidebar
         schedules={schedules}

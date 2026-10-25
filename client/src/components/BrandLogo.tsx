@@ -3,89 +3,133 @@ import React from 'react';
 export interface BrandLogoProps {
   className?: string;
   size?: number;
-  variant?: 'symbol' | 'horizontal' | 'stacked' | 'favicon' | 'monochrome' | 'light';
-  showBadge?: boolean;
-  badgeText?: string;
+  variant?: 'symbol' | 'horizontal' | 'stacked' | 'favicon' | 'monochrome';
+  showSubtitle?: boolean;
+  subtitle?: string;
+  inverted?: boolean; // For forced dark or light overrides
 }
 
 /**
- * WhatsSchedule Official Brand Identity & Mark
+ * WhatsSchedule Official Brand Logo
  * 
- * Concept: The Chrono-Dial Chat Mark (9:00 Precision Edition)
- * Fusion of a contemporary fluid messaging bubble with a high-precision schedule dial.
- * 100% original geometry — zero phone handset elements, completely free of Meta/WhatsApp trademark conflicts.
+ * Faithfully implements the approved visual identity:
+ * - Deep forest green conversation bubble silhouette (#0D3027) with emerald shading (#087F5B).
+ * - Crisp white clock dial outline and hands indicating scheduled delivery.
+ * - Center hub accent in mint emerald (#25C993).
+ * - Three rounded mint speed/schedule lines on the lower-right perimeter (#25C993).
+ * - Wordmark: "Whats" in deep green / primary text, "Schedule" in vibrant emerald (#087F5B / #25C993).
  */
 export const BrandLogo: React.FC<BrandLogoProps> = ({
   className = '',
-  size = 32,
+  size = 36,
   variant = 'symbol',
-  showBadge = false,
-  badgeText = 'v1.0',
+  showSubtitle = false,
+  subtitle = 'Message scheduling, made simple.',
+  inverted = false,
 }) => {
-  // Gradients and color tokens
-  const primaryTeal = '#05A985';
-  const primaryGreen = '#25D366';
-  const darkCard = '#111B21';
-
-  // Standalone Symbol Component
-  const renderSymbol = (iconSize: number, mono: boolean = false, lightBg: boolean = false) => {
-    const strokeColor = mono ? '#FFFFFF' : lightBg ? '#0A3323' : '#FFFFFF';
-    const dialFill = mono ? '#FFFFFF' : lightBg ? '#0A3323' : '#FFFFFF';
-
+  // SVG Graphic Symbol
+  const renderSymbol = (iconSize: number) => {
     return (
       <svg
         width={iconSize}
         height={iconSize}
-        viewBox="0 0 48 48"
+        viewBox="0 0 100 100"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         role="img"
-        aria-label="WhatsSchedule Symbol"
-        className="shrink-0 transition-transform duration-200 hover:scale-[1.02]"
+        aria-label="WhatsSchedule Logo"
+        className="shrink-0 transition-transform duration-150 hover:scale-[1.02]"
       >
         <defs>
-          <linearGradient id="chronoGradient" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
-            <stop stopColor={primaryTeal} />
-            <stop offset="1" stopColor={primaryGreen} />
+          {/* Subtle gradient for deep forest green bubble with emerald sheen on top-right */}
+          <linearGradient id="wsBubbleGrad" x1="15" y1="85" x2="85" y2="15" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#0D3027" />
+            <stop offset="45%" stopColor="#0B382D" />
+            <stop offset="100%" stopColor="#087F5B" />
           </linearGradient>
-          <filter id="markGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#25D366" floodOpacity="0.25" />
+
+          {/* Mint highlight for speed bars */}
+          <linearGradient id="wsMintGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#25C993" />
+            <stop offset="100%" stopColor="#3DD39C" />
+          </linearGradient>
+
+          <filter id="wsSoftGlow" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#0D3027" floodOpacity="0.18" />
           </filter>
         </defs>
 
-        {/* Dynamic Messaging Glyph Base with Smooth Chat Pointer */}
+        {/* 1. Main Conversation Bubble in Forest Green with smooth tail */}
         <path
-          d="M24 4.5C13.23 4.5 4.5 13.23 4.5 24C4.5 27.68 5.53 31.13 7.31 34.08L4.85 42.65C4.64 43.39 5.26 44.01 6.00 43.80L14.57 41.34C17.47 43.07 20.87 44.05 24.5 44.05C35.27 44.05 44 35.32 44 24.55C44 13.78 35.27 4.5 24.5 4.5H24Z"
-          fill={mono ? '#2A3942' : 'url(#chronoGradient)'}
-          filter="url(#markGlow)"
+          d="M50 10C27.909 10 10 27.909 10 50C10 57.8 12.2 65.1 16 71.3L11 89L29.4 84.2C35.5 87.8 42.5 90 50 90C72.091 90 90 72.091 90 50C90 27.909 72.091 10 50 10Z"
+          fill="url(#wsBubbleGrad)"
+          filter="url(#wsSoftGlow)"
         />
 
-        {/* Chrono-Dial Outer Track Ring */}
+        {/* 2. Inner White Circular Clock Dial */}
         <circle
-          cx="24.5"
-          cy="23.5"
-          r="10.5"
-          stroke={strokeColor}
-          strokeWidth="2.4"
-          strokeOpacity={mono ? 0.9 : 0.95}
-        />
-
-        {/* Precision 9:00 Time Dial Hands (9:00 HR salary & reminder benchmark) */}
-        <path
-          d="M24.5 16.5V23.5H18"
-          stroke={dialFill}
-          strokeWidth="2.5"
+          cx="50"
+          cy="48"
+          r="26"
+          stroke="#FFFFFF"
+          strokeWidth="6"
           strokeLinecap="round"
-          strokeLinejoin="round"
         />
 
-        {/* Central Escapement Hub */}
-        <circle cx="24.5" cy="23.5" r="1.8" fill={dialFill} />
+        {/* 3. Clock Hands (Indicating scheduled dispatch) */}
+        {/* Hour Hand pointing straight up to 12 */}
+        <line
+          x1="50"
+          y1="48"
+          x2="50"
+          y2="31"
+          stroke="#FFFFFF"
+          strokeWidth="5.5"
+          strokeLinecap="round"
+        />
 
-        {/* Minute Index Accent Ticks at 12, 3, 6 */}
-        <circle cx="24.5" cy="14.2" r="0.75" fill={dialFill} fillOpacity="0.8" />
-        <circle cx="33.8" cy="23.5" r="0.75" fill={dialFill} fillOpacity="0.8" />
-        <circle cx="24.5" cy="32.8" r="0.75" fill={dialFill} fillOpacity="0.8" />
+        {/* Minute Hand pointing down-right to ~4:20 */}
+        <line
+          x1="50"
+          y1="48"
+          x2="66"
+          y2="59"
+          stroke="#FFFFFF"
+          strokeWidth="5.5"
+          strokeLinecap="round"
+        />
+
+        {/* 4. Center Hub Pivot (Mint Emerald Accent) */}
+        <circle cx="50" cy="48" r="4.5" fill="#25C993" />
+
+        {/* 5. Three Rounded Speed/Schedule Hash Lines on Lower-Right */}
+        {/* Top speed line */}
+        <rect
+          x="67"
+          y="58"
+          width="18"
+          height="4.5"
+          rx="2.25"
+          fill="url(#wsMintGrad)"
+        />
+        {/* Middle speed line */}
+        <rect
+          x="67"
+          y="66"
+          width="15"
+          height="4.5"
+          rx="2.25"
+          fill="url(#wsMintGrad)"
+        />
+        {/* Bottom speed line */}
+        <rect
+          x="67"
+          y="74"
+          width="10"
+          height="4.5"
+          rx="2.25"
+          fill="url(#wsMintGrad)"
+        />
       </svg>
     );
   };
@@ -94,16 +138,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     return <div className={`inline-flex items-center justify-center ${className}`}>{renderSymbol(size)}</div>;
   }
 
-  if (variant === 'monochrome') {
-    return <div className={`inline-flex items-center justify-center ${className}`}>{renderSymbol(size, true)}</div>;
-  }
-
-  if (variant === 'light') {
-    return <div className={`inline-flex items-center justify-center ${className}`}>{renderSymbol(size, false, true)}</div>;
-  }
-
   if (variant === 'favicon') {
-    // Ultra-crisp, high-contrast 16-32px mark
     return (
       <svg
         width={size}
@@ -113,10 +148,13 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         xmlns="http://www.w3.org/2000/svg"
         className={className}
       >
-        <rect width="32" height="32" rx="7" fill={primaryTeal} />
-        <circle cx="16" cy="15" r="8" stroke="#FFFFFF" strokeWidth="2.2" />
-        <path d="M16 10V15H11.5" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" />
-        <circle cx="16" cy="15" r="1.3" fill="#FFFFFF" />
+        <rect width="32" height="32" rx="7" fill="#0D3027" />
+        <circle cx="15" cy="15" r="9" stroke="#FFFFFF" strokeWidth="2.5" />
+        <line x1="15" y1="15" x2="15" y2="9" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="15" y1="15" x2="20" y2="19" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" />
+        <circle cx="15" cy="15" r="1.5" fill="#25C993" />
+        <rect x="22" y="19" width="7" height="1.8" rx="0.9" fill="#25C993" />
+        <rect x="22" y="22" width="5" height="1.8" rx="0.9" fill="#25C993" />
       </svg>
     );
   }
@@ -126,19 +164,37 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       <div className={`inline-flex items-center gap-3 select-none ${className}`}>
         {renderSymbol(size)}
         <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold tracking-tight text-[#E9EDEF]">
-              Whats<span className="text-[#25D366]">Schedule</span>
+          <div className="flex items-center tracking-tight leading-none">
+            <span
+              className={`text-xl sm:text-2xl font-bold ${
+                inverted
+                  ? 'text-[#F2F7F4]'
+                  : 'text-[#0D3027] dark:text-[#F2F7F4]'
+              }`}
+            >
+              Whats
             </span>
-            {showBadge && (
-              <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded-full bg-[#05A985]/20 text-[#25D366] border border-[#05A985]/30">
-                {badgeText}
-              </span>
-            )}
+            <span
+              className={`text-xl sm:text-2xl font-bold ${
+                inverted
+                  ? 'text-[#25C993]'
+                  : 'text-[#087F5B] dark:text-[#25C993]'
+              }`}
+            >
+              Schedule
+            </span>
           </div>
-          <span className="text-[11px] font-medium text-[#8696A0] tracking-wide">
-            Automated Message & Media Scheduler
-          </span>
+          {showSubtitle && (
+            <span
+              className={`text-xs mt-1 font-normal ${
+                inverted
+                  ? 'text-[#B2C1B8]'
+                  : 'text-[#5D7168] dark:text-[#8A9A91]'
+              }`}
+            >
+              {subtitle}
+            </span>
+          )}
         </div>
       </div>
     );
@@ -149,10 +205,37 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       <div className={`flex flex-col items-center text-center select-none ${className}`}>
         {renderSymbol(size)}
         <div className="mt-3">
-          <span className="text-2xl font-bold tracking-tight text-[#E9EDEF] block">
-            Whats<span className="text-[#25D366]">Schedule</span>
-          </span>
-          <p className="text-xs text-[#8696A0] mt-1 font-medium">Your Messages. Your Time.</p>
+          <div className="flex items-center justify-center tracking-tight leading-none">
+            <span
+              className={`text-2xl font-bold ${
+                inverted
+                  ? 'text-[#F2F7F4]'
+                  : 'text-[#0D3027] dark:text-[#F2F7F4]'
+              }`}
+            >
+              Whats
+            </span>
+            <span
+              className={`text-2xl font-bold ${
+                inverted
+                  ? 'text-[#25C993]'
+                  : 'text-[#087F5B] dark:text-[#25C993]'
+              }`}
+            >
+              Schedule
+            </span>
+          </div>
+          {showSubtitle && (
+            <p
+              className={`text-xs mt-1 font-normal ${
+                inverted
+                  ? 'text-[#B2C1B8]'
+                  : 'text-[#5D7168] dark:text-[#8A9A91]'
+              }`}
+            >
+              {subtitle}
+            </p>
+          )}
         </div>
       </div>
     );

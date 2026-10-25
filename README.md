@@ -1,110 +1,149 @@
-# WhatsSchedule ⏰💬
+<div align="center">
 
-> **The Open-Source WhatsApp Message, Media & Automation Engine**  
-> *Architected and maintained by **Aroon Kumar**.*
+<img src="docs/images/whatschedule_logo.png" alt="WhatsSchedule Logo" width="160" />
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
+# WhatsSchedule
+
+### **Your Messages. Your Time. Message Scheduling, Made Simple.**
+
+An independent, local-first open-source scheduler for WhatsApp messages, HD videos, photos, voice memos, and documents.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-087F5B.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
-[![React 19](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev)
-[![Vite](https://img.shields.io/badge/Vite-6-646CFF.svg)](https://vite.dev)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](docker-compose.yml)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![React 19](https://img.shields.io/badge/React-19-087F5B.svg)](https://react.dev)
+[![Vite 6](https://img.shields.io/badge/Vite-6-646CFF.svg)](https://vite.dev)
+[![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-v3.4-38B2AC.svg)](https://tailwindcss.com/)
+[![Docker Ready](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](docker-compose.yml)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-25C993.svg)](CONTRIBUTING.md)
+
+<br />
+
+<img src="docs/images/whatschedule_qr_screen.png" alt="WhatsSchedule Redesigned QR Pairing Screen" width="900" style="border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);" />
+
+</div>
 
 ---
 
-## ⚡ 10-Second Value Overview
+## 🌟 Why WhatsSchedule?
 
-WhatsSchedule is an open-source, privacy-first messaging scheduler designed for professionals, teams, and developers:
+Have you ever thought of an important message at night—like asking HR about your salary or sending a project update to a client—but didn't want to send it at 11:00 PM or risk forgetting it at 9:00 AM?
 
-```
-[ Your Phone / Laptop ] ────► [ WhatsSchedule Engine (Local SQLite Queue) ]
-                                            │
-                                            ▼ (Multi-Device Protocol)
-                               [ WhatsApp Encrypted Cloud ]
-                                            │
-                                            ▼
-                           [ Recipient Receives on Schedule ]
-```
+**WhatsSchedule solves this completely.** It links directly to your WhatsApp account on your device and automatically dispatches messages, videos, documents, or voice notes at the exact date and time you choose.
 
-* 🚀 **Unlimited Scheduling Power**: Schedule unlimited text messages, HD videos, documents, and voice notes with zero artificial paywalls.
-* 🤖 **Built-In AI Assistant**: Production-grade drafting assistant with per-user rate limits, token budgeting, concurrency caps, and SHA-256 caching.
-* 🔒 **Master Security PIN Protection**: Cryptographic PBKDF2 (100,000 iterations) passcode lock preventing unauthorized access across shared computers or browser profiles.
-* 🛑 **Compliance & Opt-Out Engine**: Automatically detects inbound `STOP` or `UNSUBSCRIBE` requests and halts future dispatches to that recipient.
-* 🚨 **Emergency Queue Pause Switch**: 1-click circuit breaker to immediately halt all outgoing message queues.
-* ✓✓ **Real-Time Delivery & Read Ticks**: Live WebSocket updates for single ticks (sent), double grey ticks (delivered), and double blue ticks (read).
-* 📁 **All Media Formats**: Full native support for Apple QuickTime MOV, HEIC photos, M4A voice notes, and documents up to 100MB.
+* **🔒 100% Local & Private**: Runs on your own machine. Your messages, contacts, and session keys are never sent to third-party tracking servers.
+* **🌓 Complete Light & Dark Themes**: Fully designed light mode (`#F6F9F7` / `#087F5B`) and charcoal-green dark mode (`#101815` / `#25C993`) that sync with your system preferences.
+* **🤖 Built-in AI Assistant**: Draft professional follow-ups, friendly reminders, or formal announcements with 1 click.
+* **📱 Apple & Android Friendly**: Full native support for iPhone QuickTime `.mov` videos, `.heic` photos, voice notes, and PDFs up to 100 MB.
+* **✓✓ Live Delivery Status**: See single ticks (sent), double grey ticks (delivered to phone), and double blue ticks (read by recipient) in real-time.
+* **🛡️ Master PIN Security**: Protects your session with zero-knowledge PBKDF2 encryption (100,000 rounds) so other users or browser profiles cannot see your chats.
 
 ---
 
-## 📦 Painless Quick Start
+## 🚀 How to Use WhatsSchedule (In 3 Simple Steps)
 
-### Option A: 1-Click Launchers (Zero Terminal Knowledge)
-* **Mac & Linux**: Double-click or run `./start.sh` (installs packages, builds assets, and opens your browser automatically).
+### Step 1: Link Your WhatsApp (30 seconds)
+1. Start WhatsSchedule and open `http://localhost:5001`.
+2. Open WhatsApp on your phone $\to$ go to **Settings** (or 3 dots on Android) $\to$ tap **Linked devices** $\to$ **Link a device**.
+3. Point your phone camera at the on-screen QR code. You're connected!
+
+### Step 2: Choose Your Contact & Date
+1. Click **+ Add Schedule** or the message icon in the sidebar.
+2. Select an existing contact from your synced chat list, or type any phone number with country code (e.g. `+1 555-0192` or `+92 300-1234567`).
+3. Pick your desired date and time, or tap instant presets like **+15 Mins**, **+1 Hour**, or **Tomorrow 9am**.
+
+### Step 3: Type or AI-Draft Your Message & Schedule
+1. Type your message, or click **AI Assist Draft** to write a polished message automatically.
+2. *(Optional)* Attach photos, videos, or documents.
+3. Tap **Schedule WhatsApp Message**. The background queue takes care of the rest!
+
+---
+
+## ⚡ Quick Start Options
+
+### Option A: 1-Click Launch (No Terminal Knowledge Required)
+
+* **Mac & Linux**: Double-click or run `./start.sh` in Terminal. It automatically prepares packages and opens your browser.
 * **Windows**: Double-click `start.bat`.
 
 ### Option B: Docker Compose
+
 ```bash
 # Clone the repository
 git clone https://github.com/AroonKumarr/whatschedule.git
 cd whatschedule
 
-# Start containerized instance
+# Start container in background
 docker compose up -d
 ```
-Visit `http://localhost:5001` in your browser.
+Open **`http://localhost:5001`** in your browser.
 
 ### Option C: Developer Setup
+
 ```bash
+# Clone the repository
 git clone https://github.com/AroonKumarr/whatschedule.git
 cd whatschedule
 
-# Install workspace dependencies
+# Install dependencies for both server and client
 npm run install:all
 
-# Run concurrent development servers (Port 5001 & Port 5173 with HMR)
+# Start both backend and frontend development servers concurrently
 npm run dev
 ```
 
 ---
 
-## 📱 Mobile Access (iPhone & Android — $0 Cost)
+## 📱 Mobile App Setup (iPhone & Android — Free)
 
-WhatsSchedule is fully configured as a standalone **Progressive Web App (PWA)**:
+WhatsSchedule is packaged as a standalone **Progressive Web App (PWA)**:
 
-* **iPhone (iOS)**: Open Safari $\to$ visit your instance URL $\to$ tap **Share** (⎙) $\to$ **Add to Home Screen**. Opens full-screen with native gestures and zero browser bars.
-* **Android**: Open Chrome $\to$ tap menu (⋮) $\to$ **Install App**. Creates a native WebAPK in your app drawer.
-
----
-
-## 🛡️ Architecture & Security Model
-
-* **Frontend**: React 19, TypeScript, Vite 6, Tailwind CSS, Lucide Icons, Date-fns.
-* **Backend**: Node.js, Express, TypeScript, Multer, Pino.
-* **Database**: Embedded SQLite via Prisma ORM (zero setup, single `dev.db` file).
-* **AI Service Layer**: Built with global concurrency controls (5 max), per-user rate limiting (15 drafts/min), and fallback templates.
-* **Threat Mitigation**: Signed HMAC-SHA256 session tokens with 24-hour expiration; timing-safe signature comparison; isolated `sessionStorage`.
+* **iPhone (iOS Safari)**: Open `http://<your-computer-ip>:5001` in Safari $\to$ tap **Share** (⎙) $\to$ select **Add to Home Screen**. Launches full-screen like a native app.
+* **Android (Google Chrome)**: Open Chrome $\to$ tap the **three dots (⋮)** $\to$ tap **Install App**.
 
 ---
 
-## 🤝 Community & Contributing
+## 🎨 Brand Color Tokens
 
-We welcome community contributions! Please read:
-* [`CONTRIBUTING.md`](CONTRIBUTING.md): Step-by-step contribution guidelines and PR templates.
-* [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md): In-depth architectural manual, multi-device socket breakdown, and testing instructions.
-* [`CHANGELOG.md`](CHANGELOG.md): Complete release history and roadmap.
+WhatsSchedule uses a distinctive, trademark-safe brand identity based on emerald and forest greens:
 
----
-
-## ⚖️ Legal Notice & Trademark Disclaimer
-
-**WhatsApp** is a registered trademark of **Meta Platforms, Inc.**
-
-**WhatsSchedule** is an independent open-source productivity software project created and owned by **Aroon Kumar**. It is **NOT** affiliated with, authorized, maintained, sponsored, or endorsed by WhatsApp LLC, Meta Platforms, Inc., or any of their affiliates. See [`LEGAL_DISCLAIMER.md`](LEGAL_DISCLAIMER.md) for details.
+| Token | Light Theme | Dark Theme | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Page Background** | `#F6F9F7` | `#101815` | Soft, glare-free canvas |
+| **Main Surface** | `#FFFFFF` | `#17211D` | Primary card and content elevation |
+| **Secondary Surface**| `#F0F5F2` | `#1E2B25` | QR container, search, and table rows |
+| **Primary Accent** | `#087F5B` | `#25C993` | Buttons, links, active indicators |
+| **Primary Text** | `#16231F` | `#F2F7F4` | High-contrast readable typography |
+| **Borders** | `#DCE7E1` | `#2D3D35` | Thin dividers and component frames |
 
 ---
 
-## 📄 License
+## 🔒 Privacy & Safety Guarantee
 
-Copyright (c) 2026 **Aroon Kumar**. All rights reserved.
+* **No Secret Cloud Backdoors**: Your session tokens stay in local `./sessions/` storage on your computer.
+* **Zero Private Message Scraping**: WhatsSchedule never downloads or stores your personal chat histories. It only interacts with the messages you explicitly schedule.
+* **API Key Safety**: Your personal environment keys (`.env`) are strictly git-ignored and never committed or transmitted.
 
-Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
+---
+
+## 🤝 Contributing
+
+We love contributions from developers of all skill levels!
+* Read [`CONTRIBUTING.md`](CONTRIBUTING.md) to get started with pull requests and issues.
+* Read [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md) for full architecture and Baileys multi-device protocol details.
+
+---
+
+## ⚖️ Legal & Trademark Notice
+
+* **Independent Software**: WhatsSchedule is an independent open-source productivity tool authored and maintained by **Aroon Kumar**.
+* **Trademark Disclaimer**: WhatsApp is a registered trademark of **Meta Platforms, Inc.** WhatsSchedule is not endorsed by, sponsored by, or affiliated with WhatsApp LLC or Meta Platforms, Inc.
+
+---
+
+<div align="center">
+
+**⭐ If WhatsSchedule saves you time, please star this repository! ⭐**
+
+Crafted with care by [Aroon Kumar](https://github.com/AroonKumarr)
+
+</div>

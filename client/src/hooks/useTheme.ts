@@ -1,53 +1,96 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-export type ThemeMode = 'dark' | 'light' | 'auto';
+export type ThemeMode = 'light' | 'dark' | 'auto';
 
 export function useTheme() {
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
-    return (localStorage.getItem('whatschedule_theme_mode') as ThemeMode) || 'auto';
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
+    try {
+      const saved = localStorage.getItem('whatschedule_theme') as ThemeMode | null;
+      if (saved === 'light' || saved === 'dark' || saved === 'auto') {
+        return saved;
+      }
+    } catch (e) {}
+    return 'auto';
   });
 
-  const [resolvedDark, setResolvedDark] = useState<boolean>(true);
+  const [resolvedDark, setResolvedDark] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('whatschedule_theme');
+      if (saved === 'dark') return true;
+      if (saved === 'light') return false;
+      if (typeof window !== 'undefined' && window.matchMedia) {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+    } catch (e) {}
+    return false;
+  });
+
+  const applyTheme = useCallback((mode: ThemeMode) => {
+    let isDark = false;
+    if (mode === 'dark') {
+      isDark = true;
+    } else if (mode === 'light') {
+      isDark = false;
+    } else {
+      // Auto: follow system preferred color scheme
+      if (typeof window !== 'undefined' && window.matchMedia) {
+        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+    }
+
+    setResolvedDark(isDark);
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.documentElement.style.colorScheme = 'dark';
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.setAttribute('data-theme', 'light');
+      document.documentElement.style.colorScheme = 'light';
+    }
+  }, []);
+
+  const setThemeMode = useCallback(
+    (mode: ThemeMode) => {
+      setThemeModeState(mode);
+      try {
+        localStorage.setItem('whatschedule_theme', mode);
+      } catch (e) {}
+      applyTheme(mode);
+    },
+    [applyTheme]
+  );
+
+  const toggleTheme = useCallback(() => {
+    // If currently dark (either explicitly or via auto), switch to light.
+    // If light, switch to dark.
+    const nextMode: ThemeMode = resolvedDark ? 'light' : 'dark';
+    setThemeMode(nextMode);
+  }, [resolvedDark, setThemeMode]);
 
   useEffect(() => {
-    localStorage.setItem('whatschedule_theme_mode', themeMode);
+    applyTheme(themeMode);
 
-    const updateTheme = () => {
-      let isDark = true;
+    if (themeMode === 'auto' && typeof window !== 'undefined' && window.matchMedia) {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = (e: MediaQueryListEvent) => {
+        applyTheme('auto');
+      };
 
-      if (themeMode === 'dark') {
-        isDark = true;
-      } else if (themeMode === 'light') {
-        isDark = false;
-      } else {
-        // Auto Mode: Uses User's Local Timezone
-        // Between 6:00 PM (18:00) and 6:00 AM, Night/Dark mode is active.
-        // Between 6:00 AM and 6:00 PM, crisp Day/Light mode is active.
-        const currentHour = new Date().getHours();
-        isDark = currentHour < 6 || currentHour >= 18;
+      try {
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+      } catch (e) {
+        mediaQuery.addListener(handleChange);
+        return () => mediaQuery.removeListener(handleChange);
       }
+    }
+  }, [themeMode, applyTheme]);
 
-      setResolvedDark(isDark);
-
-      if (isDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    };
-
-    updateTheme();
-
-    // Check periodically in case time crosses 6am/6pm
-    const interval = setInterval(updateTheme, 60000);
-    return () => clearInterval(interval);
-  }, [themeMode]);
-
-  const toggleTheme = () => {
-    if (themeMode === 'auto') setThemeMode('dark');
-    else if (themeMode === 'dark') setThemeMode('light');
-    else setThemeMode('auto');
+  return {
+    themeMode,
+    setThemeMode,
+    resolvedDark,
+    toggleTheme,
   };
-
-  return { themeMode, setThemeMode, resolvedDark, toggleTheme };
 }

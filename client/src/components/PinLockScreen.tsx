@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { BrandLogo } from './BrandLogo';
-import { Lock, ShieldCheck, KeyRound, ArrowRight, Delete } from 'lucide-react';
+import { Lock, ShieldCheck, ArrowRight, Delete, Moon, Sun } from 'lucide-react';
 
 interface PinLockScreenProps {
   isPinSet: boolean;
   onSuccess: (token: string) => void;
   onSetup: (pin: string) => Promise<string>;
   onUnlock: (pin: string) => Promise<string>;
+  themeMode?: 'light' | 'dark' | 'auto';
+  onToggleTheme?: () => void;
 }
 
 export const PinLockScreen: React.FC<PinLockScreenProps> = ({
@@ -14,6 +16,8 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
   onSuccess,
   onSetup,
   onUnlock,
+  themeMode,
+  onToggleTheme,
 }) => {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -27,7 +31,6 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
       const nextPin = pin + digit;
       setPin(nextPin);
 
-      // Auto-submit if 6 digits or allow 4 digits submit
       if (nextPin.length === 6) {
         submitPin(nextPin);
       }
@@ -50,11 +53,9 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
 
     try {
       if (isPinSet) {
-        // Unlock
         const token = await onUnlock(pinToSubmit);
         onSuccess(token);
       } else {
-        // Initial setup
         if (step === 'setup') {
           setConfirmPin(pinToSubmit);
           setPin('');
@@ -83,19 +84,40 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-screen bg-[#0c1317] flex flex-col items-center justify-center p-4 text-[#e9edef] select-none">
-      <div className="w-full max-w-sm bg-[#111b21] border border-[#222d34] rounded-3xl p-8 shadow-2xl flex flex-col items-center text-center">
+    <div className="min-h-screen w-screen bg-[#F6F9F7] dark:bg-[#101815] flex flex-col items-center justify-center p-4 text-[#16231F] dark:text-[#F2F7F4] select-none transition-colors duration-150 relative">
+      
+      {/* Theme Toggle in top-right */}
+      {onToggleTheme && (
+        <div className="absolute top-6 right-6">
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            className="p-2 rounded-xl bg-white dark:bg-[#17211D] border border-[#DCE7E1] dark:border-[#2D3D35] text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#087F5B] dark:hover:text-[#25C993] transition-colors shadow-xs"
+            title="Toggle theme"
+            aria-label="Toggle theme"
+          >
+            <span className="dark:hidden">
+              <Moon className="w-4 h-4" />
+            </span>
+            <span className="hidden dark:inline">
+              <Sun className="w-4 h-4" />
+            </span>
+          </button>
+        </div>
+      )}
+
+      <div className="w-full max-w-sm bg-white dark:bg-[#17211D] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-3xl p-8 shadow-sm flex flex-col items-center text-center transition-colors duration-150">
         
-        {/* Brand Logo & Lock Icon */}
+        {/* Brand Logo & Lock Indicator */}
         <div className="relative mb-5">
           <BrandLogo size={56} />
-          <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#202c33] border-2 border-[#111b21] flex items-center justify-center text-[#25D366]">
+          <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#E5F5EF] dark:bg-[#1D3830] border-2 border-white dark:border-[#17211D] flex items-center justify-center text-[#087F5B] dark:text-[#25C993]">
             <Lock className="w-3.5 h-3.5" />
           </div>
         </div>
 
         {/* Title */}
-        <h2 className="text-xl font-bold text-white mb-1">
+        <h2 className="text-xl font-bold text-[#16231F] dark:text-[#F2F7F4] mb-1">
           {isPinSet
             ? 'WhatsSchedule is Locked'
             : step === 'setup'
@@ -103,7 +125,7 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
             : 'Confirm Master PIN'}
         </h2>
 
-        <p className="text-xs text-[#8696a0] max-w-xs mb-6 leading-relaxed">
+        <p className="text-xs text-[#5D7168] dark:text-[#8A9A91] max-w-xs mb-6 leading-relaxed">
           {isPinSet
             ? 'Enter your 4 to 6 digit Master PIN to unlock your WhatsApp scheduler on this browser.'
             : step === 'setup'
@@ -113,22 +135,22 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
 
         {/* Error Alert */}
         {error && (
-          <div className="w-full p-2.5 mb-4 bg-[#ea4335]/15 border border-[#ea4335]/30 rounded-xl text-xs text-[#ea4335] font-medium">
+          <div className="w-full p-2.5 mb-4 bg-[#B42318]/10 dark:bg-[#FF938B]/15 border border-[#B42318]/20 dark:border-[#FF938B]/30 rounded-xl text-xs text-[#B42318] dark:text-[#FF938B] font-medium">
             {error}
           </div>
         )}
 
-        {/* PIN Dots Display */}
+        {/* PIN Dots */}
         <div className="flex items-center justify-center gap-3 mb-8">
           {[0, 1, 2, 3, 4, 5].map((index) => {
             const isFilled = index < pin.length;
             return (
               <div
                 key={index}
-                className={`w-3.5 h-3.5 rounded-full transition-all duration-200 ${
+                className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${
                   isFilled
-                    ? 'bg-[#00a884] scale-110 shadow-[0_0_8px_rgba(0,168,132,0.6)]'
-                    : 'bg-[#202c33] border border-[#2a3942]'
+                    ? 'bg-[#087F5B] dark:bg-[#25C993] scale-110 shadow-xs'
+                    : 'bg-[#F0F5F2] dark:bg-[#1E2B25] border border-[#DCE7E1] dark:border-[#2D3D35]'
                 }`}
               />
             );
@@ -142,7 +164,7 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
               key={digit}
               type="button"
               onClick={() => handleDigit(digit)}
-              className="h-14 rounded-2xl bg-[#202c33] hover:bg-[#2a3942] active:scale-95 text-lg font-semibold text-white transition-all border border-[#2a3942]/60 shadow-sm flex items-center justify-center"
+              className="h-14 rounded-2xl bg-[#F0F5F2] hover:bg-[#E5F5EF] dark:bg-[#1E2B25] dark:hover:bg-[#253931] active:scale-95 text-lg font-semibold text-[#16231F] dark:text-[#F2F7F4] transition-all border border-[#DCE7E1]/80 dark:border-[#2D3D35] shadow-2xs flex items-center justify-center"
             >
               {digit}
             </button>
@@ -154,7 +176,7 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
                 type="button"
                 onClick={() => submitPin(pin)}
                 disabled={loading}
-                className="w-full h-14 rounded-2xl bg-[#00a884] hover:bg-[#02bd94] active:scale-95 text-xs font-bold text-white transition-all shadow flex items-center justify-center"
+                className="w-full h-14 rounded-2xl bg-[#087F5B] hover:bg-[#06684B] dark:bg-[#25C993] dark:hover:bg-[#46D9A6] active:scale-95 text-white dark:text-[#0D3027] transition-all shadow-xs flex items-center justify-center font-bold"
               >
                 <ArrowRight className="w-5 h-5" />
               </button>
@@ -164,7 +186,7 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
           <button
             type="button"
             onClick={() => handleDigit('0')}
-            className="h-14 rounded-2xl bg-[#202c33] hover:bg-[#2a3942] active:scale-95 text-lg font-semibold text-white transition-all border border-[#2a3942]/60 shadow-sm flex items-center justify-center"
+            className="h-14 rounded-2xl bg-[#F0F5F2] hover:bg-[#E5F5EF] dark:bg-[#1E2B25] dark:hover:bg-[#253931] active:scale-95 text-lg font-semibold text-[#16231F] dark:text-[#F2F7F4] transition-all border border-[#DCE7E1]/80 dark:border-[#2D3D35] shadow-2xs flex items-center justify-center"
           >
             0
           </button>
@@ -172,16 +194,17 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
           <button
             type="button"
             onClick={handleBackspace}
-            className="h-14 rounded-2xl bg-[#202c33] hover:bg-[#2a3942] active:scale-95 text-[#8696a0] hover:text-white transition-all border border-[#2a3942]/60 shadow-sm flex items-center justify-center"
+            className="h-14 rounded-2xl bg-[#F0F5F2] hover:bg-[#E5F5EF] dark:bg-[#1E2B25] dark:hover:bg-[#253931] active:scale-95 text-[#788980] hover:text-[#16231F] dark:hover:text-[#F2F7F4] transition-all border border-[#DCE7E1]/80 dark:border-[#2D3D35] shadow-2xs flex items-center justify-center"
             title="Delete"
+            aria-label="Delete last digit"
           >
             <Delete className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Privacy Note */}
-        <div className="flex items-center gap-1.5 text-[11px] text-[#8696a0]">
-          <ShieldCheck className="w-3.5 h-3.5 text-[#00a884]" />
+        {/* Security Indicator */}
+        <div className="flex items-center gap-1.5 text-[11px] text-[#788980] dark:text-[#8A9A91]">
+          <ShieldCheck className="w-3.5 h-3.5 text-[#087F5B] dark:text-[#25C993]" />
           <span>Zero-Knowledge Local Salt & PBKDF2 Hashing</span>
         </div>
       </div>
