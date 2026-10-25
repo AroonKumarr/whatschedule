@@ -332,27 +332,21 @@ export class PhoneLinkService {
           session.expiryTimer = null;
         }
 
-        // Copy authenticated companion credentials to main sessions/wa_auth directory
+        const userJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : 'user@s.whatsapp.net';
+        const userName = sock.user?.name || 'WhatsApp User';
+
+        // Close temporary companion handshake socket so WhatsApp server does not see dual connections
         try {
-          const mainAuthDir = path.resolve(__dirname, '../../sessions/wa_auth');
-          if (!fs.existsSync(mainAuthDir)) {
-            fs.mkdirSync(mainAuthDir, { recursive: true });
-          }
+          sock.ev.removeAllListeners('connection.update');
+          sock.ev.removeAllListeners('creds.update');
+          sock.end(undefined);
+        } catch (e) {}
 
-          const files = fs.readdirSync(session.authDir);
-          for (const file of files) {
-            fs.copyFileSync(path.join(session.authDir, file), path.join(mainAuthDir, file));
-          }
-          console.log(`[PhoneLink] Authenticated credentials successfully migrated to primary WhatsApp engine.`);
-
-          // Reinitialize main WhatsApp service to pick up newly paired credentials immediately
-          setTimeout(async () => {
-            try {
-              await whatsAppService.initialize();
-            } catch (e) {}
-          }, 500);
-        } catch (copyErr) {
-          console.error(`[PhoneLink] Error syncing credentials to main engine:`, copyErr);
+        // Immediately adopt credentials and transition primary WhatsApp engine
+        try {
+          await whatsAppService.adoptPairedSession(session.authDir, { id: userJid, name: userName });
+        } catch (adoptErr) {
+          console.error(`[PhoneLink] Error adopting paired session:`, adoptErr);
         }
       }
     });

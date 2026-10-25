@@ -230,9 +230,11 @@ export const App: React.FC = () => {
         status={status}
         onRefresh={async () => {
           try {
-            await api.logout();
+            const fresh = await api.getStatus();
+            setStatus(fresh);
           } catch (e) {}
         }}
+        onStatusUpdate={(newStatus) => setStatus(newStatus)}
         themeMode={themeMode}
         onToggleTheme={toggleTheme}
       />
@@ -294,6 +296,9 @@ export const App: React.FC = () => {
         onScheduleMessage={handleDashboardScheduleMessage}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenComposerWithText={handleOpenComposerWithText}
+        onLogoutWhatsApp={handleLogout}
+        themeMode={themeMode}
+        onToggleTheme={toggleTheme}
         isSending={sendingId !== null}
       />
 

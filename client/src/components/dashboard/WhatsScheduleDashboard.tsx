@@ -8,6 +8,9 @@ import { CalendarView } from '../CalendarView';
 import { ContactsView } from '../ContactsView';
 import { MediaVaultView } from '../MediaVaultView';
 import { TemplatesView } from '../TemplatesView';
+import { ConnectedAccountsView } from '../ConnectedAccountsView';
+import { AnalyticsView } from '../AnalyticsView';
+import { LandingPageView } from '../LandingPageView';
 import {
   Clock,
   Calendar as CalendarIcon,
@@ -32,6 +35,10 @@ interface WhatsScheduleDashboardProps {
   onScheduleMessage: (recipientJid: string, recipientName: string, content: string, file: File | null, options?: ScheduleOptions) => Promise<void>;
   onOpenSettings: () => void;
   onOpenComposerWithText?: (text: string, recipientJid?: string) => void;
+  onLogoutWhatsApp?: () => void;
+  onOpenWhatsAppConnect?: () => void;
+  themeMode?: 'light' | 'dark' | 'auto';
+  onToggleTheme?: () => void;
   isSending?: boolean;
 }
 
@@ -140,6 +147,10 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
   onScheduleMessage,
   onOpenSettings,
   onOpenComposerWithText,
+  onLogoutWhatsApp,
+  onOpenWhatsAppConnect,
+  themeMode = 'auto',
+  onToggleTheme,
   isSending = false,
 }) => {
   const [activeNav, setActiveNav] = useState<NavItemKey>('scheduled');
@@ -300,12 +311,13 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
     <div className="w-screen h-screen overflow-hidden flex bg-[#0B0F0D] text-[#E9EDEF] select-none font-sans">
       
       {/* ========================================================= */}
-      {/* ZONE 1: LEFT NAV RAIL (210px desktop, 64px tablet)        */}
+      {/* ZONE 1: LEFT NAV RAIL (220px desktop, 68px tablet)        */}
       {/* ========================================================= */}
       <div className="hidden md:flex shrink-0 h-full">
         <NavRail
           activeItem={activeNav}
           onSelectItem={(key) => setActiveNav(key)}
+          onNewSchedule={onNewSchedule}
           scheduledCount={stats.pending + 1}
           failedCount={stats.failed}
           onOpenSettings={onOpenSettings}
@@ -315,7 +327,31 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
       {/* ========================================================= */}
       {/* MAIN VIEW AREA                                            */}
       {/* ========================================================= */}
-      {activeNav === 'calendar' ? (
+      {activeNav === 'landing' ? (
+        <div className="flex-1 h-full overflow-y-auto">
+          <LandingPageView
+            onEnterDashboard={() => setActiveNav('scheduled')}
+            themeMode={themeMode}
+            onToggleTheme={onToggleTheme || (() => {})}
+          />
+        </div>
+      ) : activeNav === 'accounts' ? (
+        <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
+          <ConnectedAccountsView
+            whatsAppStatus={status}
+            onOpenWhatsAppConnect={onOpenWhatsAppConnect || (() => {})}
+            onDisconnectWhatsApp={onLogoutWhatsApp || (() => {})}
+          />
+        </div>
+      ) : activeNav === 'analytics' ? (
+        <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
+          <AnalyticsView
+            schedules={schedules}
+            stats={stats}
+            onOpenComposer={onNewSchedule}
+          />
+        </div>
+      ) : activeNav === 'calendar' ? (
         <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
           <CalendarView
             schedules={schedules}

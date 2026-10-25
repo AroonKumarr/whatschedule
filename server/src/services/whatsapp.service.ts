@@ -86,6 +86,53 @@ class WhatsAppService {
     };
   }
 
+  public async adoptPairedSession(
+    pairedAuthDir: string,
+    user: { id: string; name?: string }
+  ): Promise<void> {
+    console.log('[WhatsAppService] Adopting newly linked phone pairing session...');
+
+    // 1. Terminate any existing socket (e.g. previous QR listener)
+    if (this.sock) {
+      try {
+        this.sock.ev.removeAllListeners('connection.update');
+        this.sock.ev.removeAllListeners('creds.update');
+        this.sock.end(undefined);
+      } catch (e) {}
+      this.sock = null;
+    }
+    this.isInitializing = false;
+
+    // 2. Synchronize credentials into main auth directory
+    try {
+      if (!fs.existsSync(this.authDir)) {
+        fs.mkdirSync(this.authDir, { recursive: true });
+      }
+      const files = fs.readdirSync(pairedAuthDir);
+      for (const file of files) {
+        fs.copyFileSync(path.join(pairedAuthDir, file), path.join(this.authDir, file));
+      }
+      console.log('[WhatsAppService] Companion credentials copied to main store.');
+    } catch (err: any) {
+      console.error('[WhatsAppService] Failed to copy companion credentials:', err?.message);
+    }
+
+    // 3. Immediately set state to connected and notify clients
+    this.state = 'connected';
+    this.qrCodeUrl = null;
+    this.qrRaw = null;
+    this.user = user;
+    this.lastConnectedAt = new Date().toISOString();
+    this.notifyStatus();
+
+    // 4. Initialize real main socket with new auth state so it can process outbound scheduled messages
+    setTimeout(() => {
+      this.initialize().catch((err) => {
+        console.error('[WhatsAppService] Post-adoption initialization error:', err?.message);
+      });
+    }, 1000);
+  }
+
   public async initialize(): Promise<void> {
     if (this.isInitializing) return;
     this.isInitializing = true;

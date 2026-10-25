@@ -39,6 +39,19 @@ const COUNTRY_CODES = [
   { code: '+966', country: 'Saudi Arabia' },
 ];
 
+export type SocialPlatform = 'whatsapp' | 'instagram' | 'facebook' | 'linkedin' | 'x';
+
+const PLATFORM_CONFIG: Record<
+  SocialPlatform,
+  { name: string; color: string; maxChars: number; label: string }
+> = {
+  whatsapp: { name: 'WhatsApp', color: '#25D366', maxChars: 65536, label: 'WhatsApp Message' },
+  instagram: { name: 'Instagram', color: '#E4405F', maxChars: 2200, label: 'Instagram Post / Reel' },
+  facebook: { name: 'Facebook', color: '#1877F2', maxChars: 63206, label: 'Facebook Page Post' },
+  linkedin: { name: 'LinkedIn', color: '#0A66C2', maxChars: 3000, label: 'LinkedIn Article / Post' },
+  x: { name: 'X (Twitter)', color: '#000000', maxChars: 280, label: 'X Post' },
+};
+
 export const ComposerModal: React.FC<ComposerModalProps> = ({
   isOpen,
   onClose,
@@ -47,6 +60,7 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
   initialText = '',
   initialRecipient = '',
 }) => {
+  const [selectedPlatform, setSelectedPlatform] = useState<SocialPlatform>('whatsapp');
   const [contactMode, setContactMode] = useState<'contacts' | 'direct'>(
     initialRecipient || contacts.length > 0 ? 'contacts' : 'direct'
   );
@@ -146,15 +160,19 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
       return;
     }
 
-    if (content.length > MAX_CHAR_LIMIT) {
-      setError(`Message exceeds WhatsApp limit of ${MAX_CHAR_LIMIT} characters.`);
+    const maxLimit = PLATFORM_CONFIG[selectedPlatform].maxChars;
+    if (content.length > maxLimit) {
+      setError(`Message exceeds ${PLATFORM_CONFIG[selectedPlatform].name} limit of ${maxLimit} characters.`);
       return;
     }
 
     let finalRecipient = '';
     let finalName = recipientName;
 
-    if (contactMode === 'direct') {
+    if (selectedPlatform !== 'whatsapp') {
+      finalRecipient = `${selectedPlatform}@social.post`;
+      finalName = `${PLATFORM_CONFIG[selectedPlatform].name} Post`;
+    } else if (contactMode === 'direct') {
       let cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
       if (!cleanNumber) {
         setError('Please enter a valid phone number');
@@ -247,114 +265,172 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
             </div>
           )}
 
-          {/* Recipient Selection Mode */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[#788980] dark:text-[#8A9A91] mb-2">
-              Recipient
+          {/* 1. Multi-Platform Selector (Brand Spec) */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-[#788980] dark:text-[#8A9A91]">
+              Publishing Destination
             </label>
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <button
-                type="button"
-                onClick={() => setContactMode('contacts')}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-colors ${
-                  contactMode === 'contacts'
-                    ? 'bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] border-[#087F5B]/30 dark:border-[#25C993]/30'
-                    : 'bg-[#F6F9F7] dark:bg-[#101815] text-[#5D7168] dark:text-[#8A9A91] border-[#DCE7E1] dark:border-[#2D3D35]'
-                }`}
-              >
-                <User className="w-3.5 h-3.5" />
-                <span>From Contacts ({contacts.length})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setContactMode('direct')}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-colors ${
-                  contactMode === 'direct'
-                    ? 'bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] border-[#087F5B]/30 dark:border-[#25C993]/30'
-                    : 'bg-[#F6F9F7] dark:bg-[#101815] text-[#5D7168] dark:text-[#8A9A91] border-[#DCE7E1] dark:border-[#2D3D35]'
-                }`}
-              >
-                <Phone className="w-3.5 h-3.5" />
-                <span>Direct Phone Number</span>
-              </button>
+            <div className="flex flex-wrap gap-2">
+              {(['whatsapp', 'instagram', 'facebook', 'linkedin', 'x'] as SocialPlatform[]).map((p) => {
+                const conf = PLATFORM_CONFIG[p];
+                const isSelected = selectedPlatform === p;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setSelectedPlatform(p)}
+                    style={
+                      isSelected
+                        ? { borderColor: conf.color, color: conf.color, backgroundColor: `${conf.color}15` }
+                        : {}
+                    }
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
+                      isSelected
+                        ? 'shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: conf.color }} />
+                    <span>{conf.name}</span>
+                  </button>
+                );
+              })}
             </div>
+          </div>
 
-            {/* Mode 1: Contact Picker */}
-            {contactMode === 'contacts' ? (
-              <div className="space-y-2">
-                <div className="relative">
-                  <Search className="w-4 h-4 text-[#788980] absolute left-3 top-2.5" />
+          {/* 2. Recipient / Account Selection */}
+          {selectedPlatform === 'whatsapp' ? (
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#788980] dark:text-[#8A9A91] mb-2">
+                WhatsApp Recipient
+              </label>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setContactMode('contacts')}
+                  className={`py-2 px-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-colors ${
+                    contactMode === 'contacts'
+                      ? 'bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] border-[#087F5B]/30 dark:border-[#25C993]/30'
+                      : 'bg-[#F6F9F7] dark:bg-[#101815] text-[#5D7168] dark:text-[#8A9A91] border-[#DCE7E1] dark:border-[#2D3D35]'
+                  }`}
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>From Contacts ({contacts.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setContactMode('direct')}
+                  className={`py-2 px-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-colors ${
+                    contactMode === 'direct'
+                      ? 'bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] border-[#087F5B]/30 dark:border-[#25C993]/30'
+                      : 'bg-[#F6F9F7] dark:bg-[#101815] text-[#5D7168] dark:text-[#8A9A91] border-[#DCE7E1] dark:border-[#2D3D35]'
+                  }`}
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>Direct Phone Number</span>
+                </button>
+              </div>
+
+              {/* Mode 1: Contact Picker */}
+              {contactMode === 'contacts' ? (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-[#788980] absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      placeholder="Search synced contacts..."
+                      value={contactSearch}
+                      onChange={(e) => setContactSearch(e.target.value)}
+                      className="w-full bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl pl-9 pr-3 py-2 text-xs text-[#16231F] dark:text-[#F2F7F4] placeholder-[#788980] focus:outline-none focus:border-[#087F5B] dark:focus:border-[#25C993]"
+                    />
+                  </div>
+
+                  <div className="max-h-36 overflow-y-auto divide-y divide-[#DCE7E1] dark:divide-[#2D3D35] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl bg-[#F6F9F7] dark:bg-[#101815]">
+                    {filteredContacts.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-[#788980]">
+                        No contacts found matching search.
+                      </div>
+                    ) : (
+                      filteredContacts.map((c) => (
+                        <div
+                          key={c.id}
+                          onClick={() => setSelectedContactJid(c.id)}
+                          className={`p-2.5 flex items-center justify-between cursor-pointer text-xs transition-colors ${
+                            selectedContactJid === c.id
+                              ? 'bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] font-semibold'
+                              : 'hover:bg-[#F0F5F2] dark:hover:bg-[#1E2B25] text-[#16231F] dark:text-[#F2F7F4]'
+                          }`}
+                        >
+                          <div className="truncate">
+                            <span className="block font-medium truncate">{c.name || c.number}</span>
+                            <span className="text-[10px] text-[#788980] dark:text-[#8A9A91]">{c.number}</span>
+                          </div>
+                          {selectedContactJid === c.id && (
+                            <Check className="w-4 h-4 text-[#087F5B] dark:text-[#25C993]" />
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Mode 2: Direct Phone Input */
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      className="bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl px-2 py-2 text-xs text-[#16231F] dark:text-[#F2F7F4] focus:outline-none"
+                    >
+                      {COUNTRY_CODES.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.code} ({c.country})
+                        </option>
+                      ))}
+                    </select>
+
+                    <input
+                      type="tel"
+                      placeholder="Mobile Number (without leading 0)"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      className="flex-1 bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl px-3 py-2 text-xs text-[#16231F] dark:text-[#F2F7F4] placeholder-[#788980] focus:outline-none"
+                    />
+                  </div>
+
                   <input
                     type="text"
-                    placeholder="Search synced contacts..."
-                    value={contactSearch}
-                    onChange={(e) => setContactSearch(e.target.value)}
-                    className="w-full bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl pl-9 pr-3 py-2 text-xs text-[#16231F] dark:text-[#F2F7F4] placeholder-[#788980] focus:outline-none focus:border-[#087F5B] dark:focus:border-[#25C993]"
+                    placeholder="Recipient Name (e.g. Client / Project Manager)"
+                    value={recipientName}
+                    onChange={(e) => setRecipientName(e.target.value)}
+                    className="w-full bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl px-3 py-2 text-xs text-[#16231F] dark:text-[#F2F7F4] placeholder-[#788980] focus:outline-none"
                   />
                 </div>
-
-                <div className="max-h-36 overflow-y-auto divide-y divide-[#DCE7E1] dark:divide-[#2D3D35] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl bg-[#F6F9F7] dark:bg-[#101815]">
-                  {filteredContacts.length === 0 ? (
-                    <div className="p-3 text-center text-xs text-[#788980]">
-                      No contacts found matching search.
-                    </div>
-                  ) : (
-                    filteredContacts.map((c) => (
-                      <div
-                        key={c.id}
-                        onClick={() => setSelectedContactJid(c.id)}
-                        className={`p-2.5 flex items-center justify-between cursor-pointer text-xs transition-colors ${
-                          selectedContactJid === c.id
-                            ? 'bg-[#E5F5EF] dark:bg-[#1D3830] text-[#087F5B] dark:text-[#25C993] font-semibold'
-                            : 'hover:bg-[#F0F5F2] dark:hover:bg-[#1E2B25] text-[#16231F] dark:text-[#F2F7F4]'
-                        }`}
-                      >
-                        <div className="truncate">
-                          <span className="block font-medium truncate">{c.name || c.number}</span>
-                          <span className="text-[10px] text-[#788980] dark:text-[#8A9A91]">{c.number}</span>
-                        </div>
-                        {selectedContactJid === c.id && <Check className="w-4 h-4 text-[#087F5B] dark:text-[#25C993]" />}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            ) : (
-              /* Mode 2: Direct Number Input */
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <select
-                    value={countryCode}
-                    onChange={(e) => setCountryCode(e.target.value)}
-                    className="w-36 bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl p-2.5 text-xs text-[#16231F] dark:text-[#F2F7F4] focus:outline-none focus:border-[#087F5B] dark:focus:border-[#25C993]"
-                  >
-                    {COUNTRY_CODES.map((item) => (
-                      <option key={item.code} value={item.code}>
-                        {item.code} ({item.country})
-                      </option>
-                    ))}
-                  </select>
-
-                  <input
-                    type="tel"
-                    placeholder="Mobile Number (without leading 0)"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    className="flex-1 bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl p-2.5 text-xs text-[#16231F] dark:text-[#F2F7F4] placeholder-[#788980] focus:outline-none focus:border-[#087F5B] dark:focus:border-[#25C993]"
-                    required
-                  />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Recipient Name (e.g. HR Manager / Client)"
-                  value={recipientName}
-                  onChange={(e) => setRecipientName(e.target.value)}
-                  className="w-full bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl p-2.5 text-xs text-[#16231F] dark:text-[#F2F7F4] placeholder-[#788980] focus:outline-none focus:border-[#087F5B] dark:focus:border-[#25C993]"
+              )}
+            </div>
+          ) : (
+            /* Social Channel Publishing Indicator */
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2.5">
+                <span
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: PLATFORM_CONFIG[selectedPlatform].color }}
                 />
+                <div>
+                  <span className="font-bold text-slate-800 dark:text-white block">
+                    {PLATFORM_CONFIG[selectedPlatform].label}
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Publishing to your authorized {PLATFORM_CONFIG[selectedPlatform].name} account
+                  </span>
+                </div>
               </div>
-            )}
-          </div>
+              <span className="text-[11px] font-mono font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
+                Connected
+              </span>
+            </div>
+          )}
 
           {/* Schedule Date & Time Selection with Instant Presets */}
           <div>
@@ -465,8 +541,8 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>AI Assist Draft</span>
                 </button>
-                <span className={`text-[11px] font-mono ${content.length > 4000 ? 'text-[#9A6700] dark:text-[#F3C969]' : 'text-[#788980] dark:text-[#8A9A91]'}`}>
-                  {content.length.toLocaleString()} / {MAX_CHAR_LIMIT.toLocaleString()} chars
+                <span className={`text-[11px] font-mono ${content.length > PLATFORM_CONFIG[selectedPlatform].maxChars * 0.85 ? 'text-amber-500 font-bold' : 'text-[#788980] dark:text-[#8A9A91]'}`}>
+                  {content.length.toLocaleString()} / {PLATFORM_CONFIG[selectedPlatform].maxChars.toLocaleString()} chars
                 </span>
               </div>
             </div>
@@ -500,8 +576,8 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
 
             <textarea
               rows={4}
-              maxLength={MAX_CHAR_LIMIT}
-              placeholder="Type your scheduled message here..."
+              maxLength={PLATFORM_CONFIG[selectedPlatform].maxChars}
+              placeholder={`Write your ${PLATFORM_CONFIG[selectedPlatform].name} post or message here...`}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="w-full bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl p-3 text-sm text-[#16231F] dark:text-[#F2F7F4] placeholder-[#788980] focus:outline-none focus:border-[#087F5B] dark:focus:border-[#25C993] resize-none"
@@ -518,24 +594,25 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
                 className="mt-0.5 rounded border-[#DCE7E1] dark:border-[#2D3D35] text-[#087F5B] dark:text-[#25C993] focus:ring-0"
               />
               <span className="leading-relaxed text-[11px] text-[#5D7168] dark:text-[#8A9A91]">
-                I confirm I have prior consent or a legitimate personal/business relationship with this recipient. (Anti-Spam & PECA/GDPR compliance).
+                I confirm this content complies with platform guidelines and community policies. (PECA / GDPR / Spam safeguards).
               </span>
             </label>
           </div>
 
-          {/* Submit Button */}
+          {/* Submit Action */}
           <div className="pt-2">
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="w-full py-3.5 bg-[#087F5B] hover:bg-[#06684B] dark:bg-[#25C993] dark:hover:bg-[#46D9A6] disabled:opacity-50 text-white dark:text-[#0D3027] font-semibold rounded-xl text-sm transition-transform active:scale-[0.99] shadow-xs flex items-center justify-center gap-2"
+              disabled={isSubmitting || !content.trim()}
+              style={{ backgroundColor: PLATFORM_CONFIG[selectedPlatform].color }}
+              className="w-full py-3.5 text-white font-bold rounded-xl text-sm transition-transform active:scale-[0.99] shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (
-                <span>Scheduling in Local Queue...</span>
+                <span>Scheduling Post in Local Queue...</span>
               ) : (
                 <>
                   <Clock className="w-4 h-4" />
-                  <span>Schedule WhatsApp Message</span>
+                  <span>Schedule on {PLATFORM_CONFIG[selectedPlatform].name}</span>
                 </>
               )}
             </button>

@@ -24,6 +24,7 @@ import {
 interface QRLoginPageProps {
   status: WhatsAppStatus;
   onRefresh: () => void;
+  onStatusUpdate?: (status: WhatsAppStatus) => void;
   themeMode?: 'light' | 'dark' | 'auto';
   onToggleTheme?: () => void;
 }
@@ -31,6 +32,7 @@ interface QRLoginPageProps {
 export const QRLoginPage: React.FC<QRLoginPageProps> = ({
   status,
   onRefresh,
+  onStatusUpdate,
   themeMode = 'auto',
   onToggleTheme,
 }) => {
@@ -113,16 +115,21 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
       });
     }, 1000);
 
-    // 2s polling for server status
+    // 600ms polling for server status for instant pairing detection
     const pollTimer = setInterval(async () => {
       try {
         const res = await api.getLinkStatus(userId);
         if (res.status === 'connected') {
           setPhoneLinkStatus('connected');
-          onRefresh();
+          try {
+            const latest = await api.getStatus();
+            if (onStatusUpdate) {
+              onStatusUpdate(latest);
+            }
+          } catch (e) {}
           setTimeout(() => {
             setShowPhonePairing(false);
-          }, 1500);
+          }, 800);
         } else if (res.status === 'expired') {
           setPhoneLinkStatus('expired');
         } else if (res.status === 'error' && res.error) {
@@ -132,7 +139,7 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
           setPhoneSecondsLeft(res.secondsLeft);
         }
       } catch (err) {}
-    }, 2000);
+    }, 600);
 
     return () => {
       clearInterval(secondTimer);
