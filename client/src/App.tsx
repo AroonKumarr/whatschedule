@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ScheduledMessage, Contact, WhatsAppStatus, QueueStats } from './types';
 import { api, AuthStatus } from './services/api';
 import { useTheme } from './hooks/useTheme';
-import { PinLockScreen } from './components/PinLockScreen';
 import { QRLoginPage } from './components/QRLoginPage';
 import { Sidebar, MainNavView } from './components/Sidebar';
 import { HomeView } from './components/HomeView';
@@ -19,11 +18,12 @@ import { X } from 'lucide-react';
 export const App: React.FC = () => {
   const { themeMode, toggleTheme } = useTheme();
 
+  // Security Lock removed per user request: always unlocked
   const [authStatus, setAuthStatus] = useState<AuthStatus>({
-    isPinSet: true,
-    isUnlocked: false,
+    isPinSet: false,
+    isUnlocked: true,
   });
-  const [authChecked, setAuthChecked] = useState(false);
+  const [authChecked, setAuthChecked] = useState(true);
 
   const [status, setStatus] = useState<WhatsAppStatus>({
     state: 'connecting',
@@ -38,9 +38,11 @@ export const App: React.FC = () => {
   const [stats, setStats] = useState<QueueStats>({ total: 0, pending: 0, sent: 0, failed: 0 });
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // 5-Item Primary Navigation & Settings Overlay
+  // Navigation & Composer State
   const [activeView, setActiveView] = useState<MainNavView>('home');
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [composerInitialText, setComposerInitialText] = useState('');
+  const [composerInitialRecipient, setComposerInitialRecipient] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [sendingId, setSendingId] = useState<string | null>(null);
 
@@ -210,40 +212,18 @@ export const App: React.FC = () => {
     refreshStats();
   };
 
+  const handleOpenComposerWithText = (text: string, recipient?: string) => {
+    setComposerInitialText(text);
+    if (recipient) setComposerInitialRecipient(recipient);
+    setIsComposerOpen(true);
+  };
+
   const handleLogout = async () => {
     if (!confirm('Unlink this WhatsApp session? You will need to scan the QR code again.')) return;
     await api.logout();
   };
 
-  if (!authChecked) {
-    return (
-      <div className="h-screen w-screen bg-[#F6F9F7] dark:bg-[#101815] flex items-center justify-center text-[#5D7168] dark:text-[#8A9A91] text-sm font-medium">
-        Initializing Security Environment...
-      </div>
-    );
-  }
-
-  // 1. Master PIN Security Lock
-  if (!authStatus.isUnlocked) {
-    return (
-      <PinLockScreen
-        isPinSet={authStatus.isPinSet}
-        onSetup={async (pin) => {
-          return await api.setupPin(pin);
-        }}
-        onUnlock={async (pin) => {
-          return await api.unlock(pin);
-        }}
-        onSuccess={() => {
-          setAuthStatus({ isPinSet: true, isUnlocked: true });
-        }}
-        themeMode={themeMode}
-        onToggleTheme={toggleTheme}
-      />
-    );
-  }
-
-  // 2. WhatsApp QR Login Screen (If session not linked)
+  // WhatsApp QR Login Screen (If session not linked)
   if (status.state !== 'connected') {
     return (
       <QRLoginPage
@@ -303,32 +283,31 @@ export const App: React.FC = () => {
         stats={stats}
         selectedId={selectedId}
         onSelectSchedule={(id) => setSelectedId(id)}
-        onNewSchedule={() => setIsComposerOpen(true)}
+        onNewSchedule={() => {
+          setComposerInitialText('');
+          setComposerInitialRecipient('');
+          setIsComposerOpen(true);
+        }}
         onSendNow={handleSendNow}
         onRetry={handleRetry}
         onDelete={handleDelete}
         onScheduleMessage={handleDashboardScheduleMessage}
-        onLockApp={handleLock}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenComposerWithText={handleOpenComposerWithText}
         isSending={sendingId !== null}
       />
 
-      {/* Settings Modal Overlay */}
+      {/* Redesigned Settings Modal Overlay */}
       {isSettingsOpen && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsSettingsOpen(false);
+          }}
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150"
         >
-          <div className="relative w-full max-w-2xl bg-[#17211D] border border-[#2D3D35] rounded-3xl p-6 max-h-[90vh] overflow-y-auto shadow-2xl text-[#F2F7F4]">
-            <button
-              type="button"
-              onClick={() => setIsSettingsOpen(false)}
-              className="absolute top-4 right-4 text-[#A0A0A0] hover:text-white p-1 rounded-lg"
-              aria-label="Close settings"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          <div className="relative w-full max-w-2xl bg-[#141C18] border border-[#273A30] rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
             <SettingsView
               status={status}
               stats={stats}
@@ -337,6 +316,7 @@ export const App: React.FC = () => {
                 handleLogout();
               }}
               onTogglePause={handleTogglePause}
+              onClose={() => setIsSettingsOpen(false)}
             />
           </div>
         </div>
@@ -345,9 +325,15 @@ export const App: React.FC = () => {
       {/* Schedule Composer Modal */}
       <ComposerModal
         isOpen={isComposerOpen}
-        onClose={() => setIsComposerOpen(false)}
+        onClose={() => {
+          setIsComposerOpen(false);
+          setComposerInitialText('');
+          setComposerInitialRecipient('');
+        }}
         onSubmit={handleCreateSchedule}
         contacts={contacts}
+        initialText={composerInitialText}
+        initialRecipient={composerInitialRecipient}
       />
     </div>
   );

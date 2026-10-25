@@ -4,6 +4,10 @@ import { NavRail, NavItemKey } from './NavRail';
 import { ScheduleList, ScheduleListItem } from './ScheduleList';
 import { ConversationPane, ChatMessageItem } from './ConversationPane';
 import { ScheduleOptions } from './SchedulePopover';
+import { CalendarView } from '../CalendarView';
+import { ContactsView } from '../ContactsView';
+import { MediaVaultView } from '../MediaVaultView';
+import { TemplatesView } from '../TemplatesView';
 import {
   Clock,
   Calendar as CalendarIcon,
@@ -26,8 +30,8 @@ interface WhatsScheduleDashboardProps {
   onRetry: (id: string) => void;
   onDelete: (id: string) => void;
   onScheduleMessage: (recipientJid: string, recipientName: string, content: string, file: File | null, options?: ScheduleOptions) => Promise<void>;
-  onLockApp: () => void;
   onOpenSettings: () => void;
+  onOpenComposerWithText?: (text: string, recipientJid?: string) => void;
   isSending?: boolean;
 }
 
@@ -36,7 +40,7 @@ const SEED_RECIPIENTS = [
   {
     id: 'seed-ayesha',
     name: 'Ayesha Khan',
-    number: '+92 331 0390837',
+    number: '+92 300 1234567',
     avatarColor: '#144D37',
     subtitle: 'next send tomorrow at 9:00 AM',
     nextSendTime: 'Tomorrow 9:00 AM',
@@ -134,8 +138,8 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
   onRetry,
   onDelete,
   onScheduleMessage,
-  onLockApp,
   onOpenSettings,
+  onOpenComposerWithText,
   isSending = false,
 }) => {
   const [activeNav, setActiveNav] = useState<NavItemKey>('scheduled');
@@ -196,6 +200,23 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
 
     return [...realItems, ...seedFormatted];
   }, [schedules, contacts]);
+
+  // Filter items based on activeNav selection
+  const displayedListItems = useMemo(() => {
+    if (activeNav === 'sent') {
+      return liveListItems.filter((i) => i.status === 'sent');
+    }
+    if (activeNav === 'failed') {
+      return liveListItems.filter((i) => i.status === 'failed');
+    }
+    if (activeNav === 'drafts') {
+      return liveListItems.filter((i) => i.status === 'pending');
+    }
+    if (activeNav === 'groups') {
+      return liveListItems.filter((i) => i.number.includes('@g.us') || i.number.includes('broadcast'));
+    }
+    return liveListItems;
+  }, [liveListItems, activeNav]);
 
   // Determine currently selected conversation & messages
   const currentConversation = useMemo(() => {
@@ -279,7 +300,7 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
     <div className="w-screen h-screen overflow-hidden flex bg-[#0B0F0D] text-[#E9EDEF] select-none font-sans">
       
       {/* ========================================================= */}
-      {/* ZONE 1: LEFT NAV RAIL (~113px desktop, 64px tablet)       */}
+      {/* ZONE 1: LEFT NAV RAIL (210px desktop, 64px tablet)        */}
       {/* ========================================================= */}
       <div className="hidden md:flex shrink-0 h-full">
         <NavRail
@@ -288,28 +309,23 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
           scheduledCount={stats.pending + 1}
           failedCount={stats.failed}
           onOpenSettings={onOpenSettings}
-          onLockApp={onLockApp}
         />
       </div>
 
       {/* ========================================================= */}
-      {/* ZONE 2: MIDDLE LIST (~305px desktop & tablet)             */}
+      {/* MAIN VIEW AREA                                            */}
       {/* ========================================================= */}
-      <div
-        className={`h-full ${
-          mobileScreen === 'conversation' ? 'hidden md:flex' : 'flex w-full md:w-[305px]'
-        }`}
-      >
-        <div className="flex-1 h-full flex flex-col min-w-0">
-          <ScheduleList
-            items={liveListItems}
-            selectedId={selectedId || (liveListItems[0]?.id ?? null)}
-            onSelectSchedule={handleSelectRow}
-            onNewSchedule={onNewSchedule}
-            className="w-full h-full"
+      {activeNav === 'calendar' ? (
+        <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
+          <CalendarView
+            schedules={schedules}
+            onSelect={(id) => {
+              onSelectSchedule(id);
+              setActiveNav('scheduled');
+            }}
+            onOpenComposer={onNewSchedule}
           />
-
-          {/* Phone Bottom Tab Bar (< 768px Screen 1) */}
+          {/* Mobile Bottom Tab Bar */}
           <nav
             aria-label="Mobile Navigation"
             className="md:hidden h-14 bg-[#141414] border-t border-[#242424] flex items-center justify-around px-2 pb-env-safe shrink-0 z-30"
@@ -331,7 +347,7 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
                     if (tab.id === 'settings') onOpenSettings();
                     else setActiveNav(tab.id as any);
                   }}
-                  className={`flex flex-col items-center justify-center w-14 h-full gap-0.5 text-[10px] font-semibold transition-colors ${
+                  className={`flex flex-col items-center justify-center w-14 h-full gap-0.5 text-[10px] font-semibold transition-colors cursor-pointer ${
                     isCurrent ? 'text-[#2DD4A7]' : 'text-[#787878] hover:text-white'
                   }`}
                 >
@@ -342,28 +358,229 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
             })}
           </nav>
         </div>
-      </div>
+      ) : activeNav === 'contacts' ? (
+        <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
+          <ContactsView
+            contacts={contacts}
+            onSelectContact={(contact) => {
+              // Find matching schedule or set recipient
+              const matching = schedules.find((s) => s.recipient === contact.id);
+              if (matching) {
+                onSelectSchedule(matching.id);
+              }
+              setActiveNav('scheduled');
+            }}
+            onScheduleContact={(contact) => {
+              if (onOpenComposerWithText) {
+                onOpenComposerWithText('', contact.id);
+              } else {
+                onNewSchedule();
+              }
+            }}
+            onSendNowContact={(contact) => {
+              if (onOpenComposerWithText) {
+                onOpenComposerWithText('', contact.id);
+              } else {
+                onNewSchedule();
+              }
+            }}
+          />
+          {/* Mobile Bottom Tab Bar */}
+          <nav
+            aria-label="Mobile Navigation"
+            className="md:hidden h-14 bg-[#141414] border-t border-[#242424] flex items-center justify-around px-2 pb-env-safe shrink-0 z-30"
+          >
+            {[
+              { id: 'scheduled', label: 'Scheduled', icon: Clock },
+              { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
+              { id: 'contacts', label: 'Contacts', icon: Users },
+              { id: 'media', label: 'Media', icon: FolderOpen },
+              { id: 'settings', label: 'Settings', icon: Settings },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isCurrent = activeNav === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    if (tab.id === 'settings') onOpenSettings();
+                    else setActiveNav(tab.id as any);
+                  }}
+                  className={`flex flex-col items-center justify-center w-14 h-full gap-0.5 text-[10px] font-semibold transition-colors cursor-pointer ${
+                    isCurrent ? 'text-[#2DD4A7]' : 'text-[#787878] hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      ) : activeNav === 'media' ? (
+        <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
+          <MediaVaultView
+            schedules={schedules}
+            onSelect={(id) => {
+              onSelectSchedule(id);
+              setActiveNav('scheduled');
+            }}
+            onDelete={onDelete}
+          />
+          {/* Mobile Bottom Tab Bar */}
+          <nav
+            aria-label="Mobile Navigation"
+            className="md:hidden h-14 bg-[#141414] border-t border-[#242424] flex items-center justify-around px-2 pb-env-safe shrink-0 z-30"
+          >
+            {[
+              { id: 'scheduled', label: 'Scheduled', icon: Clock },
+              { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
+              { id: 'contacts', label: 'Contacts', icon: Users },
+              { id: 'media', label: 'Media', icon: FolderOpen },
+              { id: 'settings', label: 'Settings', icon: Settings },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isCurrent = activeNav === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    if (tab.id === 'settings') onOpenSettings();
+                    else setActiveNav(tab.id as any);
+                  }}
+                  className={`flex flex-col items-center justify-center w-14 h-full gap-0.5 text-[10px] font-semibold transition-colors cursor-pointer ${
+                    isCurrent ? 'text-[#2DD4A7]' : 'text-[#787878] hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      ) : activeNav === 'templates' ? (
+        <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
+          <TemplatesView
+            onUseTemplate={(text) => {
+              if (onOpenComposerWithText) {
+                onOpenComposerWithText(text);
+              } else {
+                onNewSchedule();
+              }
+            }}
+          />
+          {/* Mobile Bottom Tab Bar */}
+          <nav
+            aria-label="Mobile Navigation"
+            className="md:hidden h-14 bg-[#141414] border-t border-[#242424] flex items-center justify-around px-2 pb-env-safe shrink-0 z-30"
+          >
+            {[
+              { id: 'scheduled', label: 'Scheduled', icon: Clock },
+              { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
+              { id: 'contacts', label: 'Contacts', icon: Users },
+              { id: 'media', label: 'Media', icon: FolderOpen },
+              { id: 'settings', label: 'Settings', icon: Settings },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isCurrent = activeNav === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    if (tab.id === 'settings') onOpenSettings();
+                    else setActiveNav(tab.id as any);
+                  }}
+                  className={`flex flex-col items-center justify-center w-14 h-full gap-0.5 text-[10px] font-semibold transition-colors cursor-pointer ${
+                    isCurrent ? 'text-[#2DD4A7]' : 'text-[#787878] hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      ) : (
+        <>
+          {/* ========================================================= */}
+          {/* ZONE 2: MIDDLE LIST (~305px desktop & tablet)             */}
+          {/* ========================================================= */}
+          <div
+            className={`h-full ${
+              mobileScreen === 'conversation' ? 'hidden md:flex' : 'flex w-full md:w-[305px]'
+            }`}
+          >
+            <div className="flex-1 h-full flex flex-col min-w-0">
+              <ScheduleList
+                items={displayedListItems}
+                selectedId={selectedId || (displayedListItems[0]?.id ?? null)}
+                onSelectSchedule={handleSelectRow}
+                onNewSchedule={onNewSchedule}
+                className="w-full h-full"
+              />
 
-      {/* ========================================================= */}
-      {/* ZONE 3: RIGHT CONVERSATION PANE                           */}
-      {/* ========================================================= */}
-      <div
-        className={`flex-1 h-full overflow-hidden ${
-          mobileScreen === 'list' ? 'hidden md:flex' : 'flex w-full'
-        }`}
-      >
-        <ConversationPane
-          selectedRecipient={currentConversation?.recipient || null}
-          messages={currentConversation?.messages || []}
-          onBack={() => setMobileScreen('list')}
-          onSendMessage={(text, file) => handleSendOrSchedule(text, file)}
-          onScheduleMessage={(text, file, options) => handleSendOrSchedule(text, file, options)}
-          onSendNow={onSendNow}
-          onRetry={onRetry}
-          onDelete={onDelete}
-          isSending={isSending}
-        />
-      </div>
+              {/* Phone Bottom Tab Bar (< 768px Screen 1) */}
+              <nav
+                aria-label="Mobile Navigation"
+                className="md:hidden h-14 bg-[#141414] border-t border-[#242424] flex items-center justify-around px-2 pb-env-safe shrink-0 z-30"
+              >
+                {[
+                  { id: 'scheduled', label: 'Scheduled', icon: Clock },
+                  { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
+                  { id: 'contacts', label: 'Contacts', icon: Users },
+                  { id: 'media', label: 'Media', icon: FolderOpen },
+                  { id: 'settings', label: 'Settings', icon: Settings },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isCurrent = activeNav === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        if (tab.id === 'settings') onOpenSettings();
+                        else setActiveNav(tab.id as any);
+                      }}
+                      className={`flex flex-col items-center justify-center w-14 h-full gap-0.5 text-[10px] font-semibold transition-colors cursor-pointer ${
+                        isCurrent ? 'text-[#2DD4A7]' : 'text-[#787878] hover:text-white'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* ZONE 3: RIGHT CONVERSATION PANE                           */}
+          {/* ========================================================= */}
+          <div
+            className={`flex-1 h-full overflow-hidden ${
+              mobileScreen === 'list' ? 'hidden md:flex' : 'flex w-full'
+            }`}
+          >
+            <ConversationPane
+              selectedRecipient={currentConversation?.recipient || null}
+              messages={currentConversation?.messages || []}
+              onBack={() => setMobileScreen('list')}
+              onSendMessage={(text, file) => handleSendOrSchedule(text, file)}
+              onScheduleMessage={(text, file, options) => handleSendOrSchedule(text, file, options)}
+              onSendNow={onSendNow}
+              onRetry={onRetry}
+              onDelete={onDelete}
+              isSending={isSending}
+            />
+          </div>
+        </>
+      )}
 
     </div>
   );

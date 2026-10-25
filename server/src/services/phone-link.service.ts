@@ -224,7 +224,14 @@ export class PhoneLinkService {
 
     session.sock = sock;
 
-    sock.ev.on('creds.update', saveCreds);
+    sock.ev.on('creds.update', async () => {
+      try {
+        fs.mkdirSync(session.authDir, { recursive: true });
+        await saveCreds();
+      } catch (e: any) {
+        // Safe guard against asynchronous credential writes during session disposal
+      }
+    });
 
     sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update;

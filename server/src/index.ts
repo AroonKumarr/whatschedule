@@ -20,25 +20,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Auth middleware for security: Checks if master PIN is configured
-const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const isPinSet = await authService.isPinConfigured();
-  if (!isPinSet) {
-    // No PIN set yet, allow through to initial setup
-    return next();
-  }
-
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
-
-  if (!authService.validateToken(token)) {
-    return res.status(401).json({
-      success: false,
-      error: 'Security Lock Active. Please enter Master PIN to unlock.',
-      locked: true,
-    });
-  }
-
+// Direct access middleware (Lock feature removed per user request)
+const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   next();
 };
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { WhatsAppStatus } from '../types';
 import { BrandLogo } from './BrandLogo';
 import { ThemeToggle } from './ThemeToggle';
+import { CountryCodePicker } from './CountryCodePicker';
 import { api } from '../services/api';
 import {
   RefreshCw,
@@ -554,93 +555,93 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
           role="dialog"
           aria-modal="true"
           aria-labelledby="phone-modal-title"
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCancelPhonePairing();
+          }}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150"
         >
-          <div className="bg-white dark:bg-[#17211D] rounded-2xl border border-[#DCE7E1] dark:border-[#2D3D35] p-6 max-w-md w-full shadow-xl space-y-4 relative">
+          <div className="bg-[#141B18] text-[#F2F7F4] rounded-3xl border border-[#273830] p-6 max-w-md w-full shadow-2xl space-y-4 relative">
             <button
               type="button"
               onClick={handleCancelPhonePairing}
-              className="absolute top-4 right-4 text-[#788980] hover:text-[#16231F] dark:hover:text-[#F2F7F4] p-1 rounded-lg"
+              className="absolute top-4 right-4 text-[#8A9A91] hover:text-white p-1.5 rounded-xl hover:bg-white/5 transition-colors"
               aria-label="Close dialog"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#E5F5EF] dark:bg-[#1D3830] flex items-center justify-center text-[#087F5B] dark:text-[#25C993]">
-                <Smartphone className="w-4 h-4" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#1D3830] border border-[#25C993]/20 flex items-center justify-center text-[#25C993]">
+                <Smartphone className="w-5 h-5" />
               </div>
               <div>
-                <h3 id="phone-modal-title" className="text-sm font-bold text-[#16231F] dark:text-[#F2F7F4]">
+                <h3 id="phone-modal-title" className="text-base font-bold text-white tracking-tight">
                   Link with Phone Number
                 </h3>
-                <span className="text-[11px] text-[#5D7168] dark:text-[#8A9A91]">
-                  Official Baileys multi-device pairing
+                <span className="text-[11px] text-[#8A9A91]">
+                  Official companion device pairing via 8-digit code
                 </span>
               </div>
             </div>
 
             {phoneLinkStatus === 'connected' ? (
               <div className="space-y-4 text-center py-4">
-                <div className="w-12 h-12 rounded-full bg-[#E5F5EF] dark:bg-[#1D3830] flex items-center justify-center text-[#087F5B] dark:text-[#25C993] mx-auto animate-bounce">
+                <div className="w-12 h-12 rounded-full bg-[#1D3830] text-[#25C993] flex items-center justify-center mx-auto animate-bounce">
                   <CheckCircle2 className="w-7 h-7" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-[#16231F] dark:text-[#F2F7F4]">
+                  <h4 className="text-sm font-bold text-white">
                     WhatsApp Linked Successfully!
                   </h4>
-                  <p className="text-xs text-[#5D7168] dark:text-[#8A9A91] mt-1">
+                  <p className="text-xs text-[#8A9A91] mt-1">
                     Your session is now active and ready for scheduling.
                   </p>
                 </div>
               </div>
             ) : phonePairingStep === 'input' ? (
-              <form onSubmit={handlePhonePairingSubmit} className="space-y-3 pt-2">
-                <p className="text-xs text-[#5D7168] dark:text-[#B2C1B8] leading-relaxed">
-                  Enter your international WhatsApp phone number to generate an official 8-character verification code:
+              <form onSubmit={handlePhonePairingSubmit} className="space-y-4 pt-1">
+                <p className="text-xs text-[#B2C1B8] leading-relaxed">
+                  Enter your mobile number to generate a secure pairing code. Select your country code or search from the dropdown:
                 </p>
 
                 {phonePairingError && (
-                  <div className="p-2.5 rounded-xl bg-[#FEF3F2] dark:bg-[#2D1615] border border-[#FECDCA] dark:border-[#5B2321] text-xs text-[#B42318] dark:text-[#FF938B] flex items-start gap-2">
+                  <div className="p-3 rounded-xl bg-[#2D1615] border border-[#5B2321] text-xs text-[#FF938B] flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                     <span className="leading-tight">{phonePairingError}</span>
                   </div>
                 )}
 
-                <div className="flex gap-2">
-                  <input
-                    type="text"
+                <div className="flex gap-2 items-center">
+                  <CountryCodePicker
                     value={countryCode}
-                    onChange={(e) => setCountryCode(e.target.value)}
-                    aria-label="Country Code"
-                    className="w-18 bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl px-2.5 py-2 text-xs text-[#16231F] dark:text-[#F2F7F4] text-center font-mono font-medium focus-visible:ring-2 focus-visible:ring-[#087F5B] dark:focus-visible:ring-[#25C993] focus-visible:outline-none"
-                    placeholder="+92"
+                    onChange={(dial) => setCountryCode(dial)}
                   />
                   <input
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                     aria-label="Phone Number"
-                    className="flex-1 bg-[#F6F9F7] dark:bg-[#101815] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl px-3 py-2 text-xs text-[#16231F] dark:text-[#F2F7F4] font-mono focus-visible:ring-2 focus-visible:ring-[#087F5B] dark:focus-visible:ring-[#25C993] focus-visible:outline-none placeholder-[#788980]"
-                    placeholder="e.g. 0331 0390837 or 331 0390837"
+                    className="flex-1 h-10 bg-[#101815] border border-[#273830] focus:border-[#25C993] rounded-xl px-3 text-xs text-white font-mono focus-visible:ring-2 focus-visible:ring-[#25C993] focus-visible:outline-none placeholder-[#5A6D63]"
+                    placeholder="e.g. 300 1234567 or 12334..."
+                    autoFocus
                     required
                   />
                 </div>
 
-                <p className="text-[11px] text-[#788980] dark:text-[#8A9A91]">
-                  Tip: Supports local numbers starting with 0 (e.g. 0331...) or international numbers directly.
+                <p className="text-[11px] text-[#8A9A91]">
+                  Supports local numbers (e.g. <span className="font-mono text-[#25C993]">0300 1234567</span>) or international numbers directly.
                 </p>
 
                 <div className="pt-1">
                   <button
                     type="submit"
                     disabled={phonePairingLoading}
-                    className="w-full bg-[#087F5B] hover:bg-[#06684B] dark:bg-[#25C993] dark:hover:bg-[#46D9A6] text-white dark:text-[#0D3027] text-xs font-semibold py-2.5 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
+                    className="w-full bg-[#25C993] hover:bg-[#46D9A6] text-[#0D3027] text-xs font-bold py-2.5 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-xs disabled:opacity-50 cursor-pointer"
                   >
                     {phonePairingLoading ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Requesting code from WhatsApp...</span>
+                        <span>Requesting official code from WhatsApp...</span>
                       </>
                     ) : (
                       <>
@@ -653,33 +654,33 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
               </form>
             ) : phoneLinkStatus === 'expired' ? (
               <div className="space-y-4 text-center py-4">
-                <div className="w-12 h-12 rounded-full bg-[#FEF3F2] dark:bg-[#2D1615] text-[#B42318] dark:text-[#FF938B] flex items-center justify-center mx-auto">
+                <div className="w-12 h-12 rounded-full bg-[#2D1615] text-[#FF938B] flex items-center justify-center mx-auto">
                   <Clock className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-[#16231F] dark:text-[#F2F7F4]">
+                  <h4 className="text-sm font-bold text-white">
                     Pairing Code Expired
                   </h4>
-                  <p className="text-xs text-[#5D7168] dark:text-[#8A9A91] mt-1">
-                    WhatsApp codes expire after 3 minutes for security. Please generate a fresh code.
+                  <p className="text-xs text-[#8A9A91] mt-1">
+                    WhatsApp pairing codes expire after 3 minutes for security. Please generate a fresh code.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => handlePhonePairingSubmit()}
                   disabled={phonePairingLoading}
-                  className="w-full bg-[#087F5B] hover:bg-[#06684B] dark:bg-[#25C993] dark:hover:bg-[#46D9A6] text-white dark:text-[#0D3027] text-xs font-semibold py-2.5 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-xs"
+                  className="w-full bg-[#25C993] hover:bg-[#46D9A6] text-[#0D3027] text-xs font-bold py-2.5 px-4 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${phonePairingLoading ? 'animate-spin' : ''}`} />
-                  <span>Generate New Code</span>
+                  <span>Generate Fresh Code</span>
                 </button>
               </div>
             ) : (
               <div className="space-y-4 text-center py-2">
-                <div className="flex items-center justify-between text-xs text-[#5D7168] dark:text-[#B2C1B8]">
+                <div className="flex items-center justify-between text-xs text-[#B2C1B8]">
                   <span>Enter this code on your phone:</span>
-                  <span className="font-mono font-semibold text-[#087F5B] dark:text-[#25C993] flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
+                  <span className="font-mono font-semibold text-[#25C993] flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5" />
                     <span>
                       {Math.floor(phoneSecondsLeft / 60)}:{(phoneSecondsLeft % 60).toString().padStart(2, '0')}
                     </span>
@@ -687,35 +688,35 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
                 </div>
 
                 <div className="flex items-center justify-center gap-2">
-                  <div className="text-2xl font-mono font-bold tracking-widest text-[#087F5B] dark:text-[#25C993] bg-[#E5F5EF] dark:bg-[#1D3830] py-3 px-5 rounded-xl border border-[#087F5B]/30 dark:border-[#25C993]/30 select-all shadow-inner">
+                  <div className="text-2xl font-mono font-bold tracking-widest text-[#25C993] bg-[#1D3830] py-3.5 px-6 rounded-2xl border border-[#25C993]/40 select-all shadow-inner">
                     {phonePairingCode}
                   </div>
                   <button
                     type="button"
                     onClick={handleCopyCode}
-                    className="p-3 bg-[#F0F5F2] dark:bg-[#1E2B25] hover:bg-[#E5F5EF] dark:hover:bg-[#254A40] text-[#16231F] dark:text-[#F2F7F4] rounded-xl border border-[#DCE7E1] dark:border-[#2D3D35] transition-colors flex items-center justify-center"
+                    className="p-3.5 bg-[#1E2B25] hover:bg-[#254A40] text-white rounded-2xl border border-[#2D3D35] transition-colors flex items-center justify-center cursor-pointer"
                     title="Copy Pairing Code"
                     aria-label="Copy Pairing Code"
                   >
                     {copiedCode ? (
-                      <Check className="w-4 h-4 text-[#087F5B] dark:text-[#25C993]" />
+                      <Check className="w-5 h-5 text-[#25C993]" />
                     ) : (
-                      <Copy className="w-4 h-4 text-[#5D7168] dark:text-[#B2C1B8]" />
+                      <Copy className="w-5 h-5 text-[#B2C1B8]" />
                     )}
                   </button>
                 </div>
 
-                <div className="bg-[#F0F5F2] dark:bg-[#1E2B25] p-3 rounded-xl border border-[#DCE7E1] dark:border-[#2D3D35] text-left text-xs text-[#5D7168] dark:text-[#B2C1B8] space-y-1.5">
-                  <div className="font-semibold text-[#16231F] dark:text-[#F2F7F4]">How to enter this code:</div>
+                <div className="bg-[#1E2B25]/80 p-3.5 rounded-2xl border border-[#2D3D35] text-left text-xs text-[#B2C1B8] space-y-2">
+                  <div className="font-semibold text-white">How to connect on your phone:</div>
                   <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed">
-                    <li>Open WhatsApp on your phone</li>
+                    <li>Open WhatsApp on your mobile phone</li>
                     <li>Tap <strong>Settings</strong> (iOS) or <strong>⋮ More options</strong> (Android) &gt; <strong>Linked Devices</strong></li>
                     <li>Tap <strong>Link a Device</strong> &gt; <strong>Link with phone number instead</strong></li>
-                    <li>Type the code <strong>{phonePairingCode}</strong></li>
+                    <li>Enter the code <strong className="font-mono text-[#25C993]">{phonePairingCode}</strong></li>
                   </ol>
                 </div>
 
-                <div className="flex items-center justify-center gap-2 pt-1 text-xs text-[#087F5B] dark:text-[#25C993] font-medium">
+                <div className="flex items-center justify-center gap-2 pt-1 text-xs text-[#25C993] font-medium">
                   <span className="w-2 h-2 rounded-full bg-[#25C993] animate-ping" />
                   <span>Waiting for your phone to confirm connection...</span>
                 </div>
@@ -727,7 +728,7 @@ export const QRLoginPage: React.FC<QRLoginPageProps> = ({
                     setPhonePairingError(null);
                     setPhoneLinkStatus('idle');
                   }}
-                  className="text-xs text-[#5D7168] dark:text-[#8A9A91] hover:underline pt-1 block mx-auto"
+                  className="text-xs text-[#8A9A91] hover:text-white hover:underline pt-1 block mx-auto cursor-pointer"
                 >
                   Change phone number
                 </button>

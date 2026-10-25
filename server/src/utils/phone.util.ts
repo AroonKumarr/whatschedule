@@ -2,11 +2,11 @@
  * Normalizes user-entered phone number into standard international format digits (E.164 without leading plus).
  * Smartly handles Pakistan (+92) local prefixes:
  * - '0300 1234567' -> '923001234567'
- * - '03310390837' -> '923310390837'
- * - '3310390837' (with default CC 92) -> '923310390837'
- * - '+92 331-0390837' -> '923310390837'
+ * - '03001234567' -> '923001234567'
+ * - '3001234567' (with default CC 92) -> '923001234567'
+ * - '+92 300-1234567' -> '923001234567'
  * - '+1 (555) 123-4567' -> '15551234567'
- * - '9203310390837' -> '923310390837'
+ * - '9203001234567' -> '923001234567'
  */
 export function normalizePhoneNumber(rawInput: string, defaultCountryCode: string = '92'): string {
   if (!rawInput || typeof rawInput !== 'string') {

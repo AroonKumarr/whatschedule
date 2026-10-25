@@ -21,6 +21,8 @@ interface ComposerModalProps {
   onClose: () => void;
   onSubmit: (formData: FormData) => Promise<void>;
   contacts: Contact[];
+  initialText?: string;
+  initialRecipient?: string;
 }
 
 const COUNTRY_CODES = [
@@ -42,15 +44,15 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
   onClose,
   onSubmit,
   contacts,
+  initialText = '',
+  initialRecipient = '',
 }) => {
-  if (!isOpen) return null;
-
   const [contactMode, setContactMode] = useState<'contacts' | 'direct'>(
-    contacts.length > 0 ? 'contacts' : 'direct'
+    initialRecipient || contacts.length > 0 ? 'contacts' : 'direct'
   );
   const [contactSearch, setContactSearch] = useState('');
   const [selectedContactJid, setSelectedContactJid] = useState(
-    contacts.length > 0 ? contacts[0].id : ''
+    initialRecipient || (contacts.length > 0 ? contacts[0].id : '')
   );
 
   const [countryCode, setCountryCode] = useState('+92');
@@ -63,11 +65,24 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
     "yyyy-MM-dd'T'HH:mm"
   );
   const [scheduledAt, setScheduledAt] = useState(defaultTomorrow9am);
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState(initialText);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [hasConsent, setHasConsent] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (initialText) setContent(initialText);
+  }, [initialText]);
+
+  React.useEffect(() => {
+    if (initialRecipient) {
+      setSelectedContactJid(initialRecipient);
+      setContactMode('contacts');
+    }
+  }, [initialRecipient]);
+
+  if (!isOpen) return null;
 
   const [showAiPrompt, setShowAiPrompt] = useState(false);
   const [aiPromptInput, setAiPromptInput] = useState('');

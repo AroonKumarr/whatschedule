@@ -108,7 +108,7 @@ export const SendNowView: React.FC<SendNowViewProps> = ({ contacts, onMessageSen
       }
       const cleanCc = countryCode.replace(/[^0-9]/g, '') || '92';
 
-      // Smart normalization for local numbers starting with 0 (e.g. 03310390837 -> 923310390837)
+      // Smart normalization for local numbers starting with 0 (e.g. 03001234567 -> 923001234567)
       if (cleanNumber.startsWith('0')) {
         cleanNumber = cleanNumber.replace(/^0+/, '');
       }

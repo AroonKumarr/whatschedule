@@ -11,7 +11,6 @@ import {
   FileEdit,
   Users2,
   Settings,
-  Lock,
   Sun,
   Moon,
   ExternalLink,
@@ -35,7 +34,6 @@ interface NavRailProps {
   scheduledCount: number;
   failedCount?: number;
   onOpenSettings?: () => void;
-  onLockApp?: () => void;
   className?: string;
 }
 
@@ -45,7 +43,6 @@ export const NavRail: React.FC<NavRailProps> = ({
   scheduledCount,
   failedCount = 0,
   onOpenSettings,
-  onLockApp,
   className = '',
 }) => {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
@@ -63,7 +60,7 @@ export const NavRail: React.FC<NavRailProps> = ({
     <aside
       role="navigation"
       aria-label="Application Rail"
-      className={`h-full flex flex-col justify-between bg-[#111111] border-r border-[#242424] text-[#A0A0A0] select-none py-3 px-2 transition-all duration-200 w-[64px] lg:w-[113px] shrink-0 ${className}`}
+      className={`h-full flex flex-col justify-between bg-[#111111] border-r border-[#242424] text-[#A0A0A0] select-none py-3 px-2 transition-all duration-200 w-[64px] lg:w-[210px] shrink-0 ${className}`}
     >
       {/* Top Brand Logo & Primary Navigation */}
       <div className="flex flex-col items-center lg:items-stretch space-y-4">
@@ -89,22 +86,22 @@ export const NavRail: React.FC<NavRailProps> = ({
                 key={item.key}
                 type="button"
                 onClick={() => onSelectItem(item.key)}
-                className={`relative w-full flex items-center justify-center lg:justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 group ${
+                className={`relative w-full flex items-center justify-center lg:justify-between px-2.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 group cursor-pointer ${
                   isActive
                     ? 'bg-[#1D3830] text-[#2DD4A7] shadow-xs'
                     : 'text-[#A0A0A0] hover:text-white hover:bg-white/5'
                 }`}
                 title={item.label}
               >
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-[#2DD4A7]' : 'text-[#A0A0A0] group-hover:text-white'}`} />
-                  <span className="hidden lg:inline truncate text-[11px] font-medium">{item.label}</span>
+                  <span className="hidden lg:inline text-xs font-medium truncate">{item.label}</span>
                 </div>
 
                 {/* Count Badge */}
                 {item.count !== undefined && item.count > 0 && (
                   <span
-                    className={`hidden lg:flex min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full items-center justify-center transition-all ${
+                    className={`hidden lg:flex min-w-[20px] h-[20px] px-1.5 text-[10px] font-bold rounded-full items-center justify-center transition-all ${
                       isActive
                         ? 'bg-[#2DD4A7] text-[#0D3027]'
                         : 'bg-[#2A2A2A] text-white'
@@ -230,25 +227,12 @@ export const NavRail: React.FC<NavRailProps> = ({
         <button
           type="button"
           onClick={onOpenSettings}
-          className="w-full flex items-center justify-center lg:justify-start gap-2 p-2 rounded-xl text-xs text-[#A0A0A0] hover:text-white hover:bg-white/5 transition-colors"
+          className="w-full flex items-center justify-center lg:justify-start gap-2.5 p-2.5 rounded-xl text-xs text-[#A0A0A0] hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
           title="App Settings"
         >
-          <Settings className="w-4 h-4" />
-          <span className="hidden lg:inline text-[11px] font-medium">Settings</span>
+          <Settings className="w-4 h-4 shrink-0" />
+          <span className="hidden lg:inline text-xs font-medium">Settings</span>
         </button>
-
-        {/* Lock PIN */}
-        {onLockApp && (
-          <button
-            type="button"
-            onClick={onLockApp}
-            className="w-full flex items-center justify-center lg:justify-start gap-2 p-2 rounded-xl text-xs text-[#A0A0A0] hover:text-[#FF938B] hover:bg-white/5 transition-colors"
-            title="Lock with Master PIN"
-          >
-            <Lock className="w-4 h-4" />
-            <span className="hidden lg:inline text-[11px] font-medium">Lock</span>
-          </button>
-        )}
       </div>
     </aside>
   );

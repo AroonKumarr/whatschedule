@@ -1,21 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WhatsAppStatus, QueueStats } from '../types';
 import {
   Settings as SettingsIcon,
   Smartphone,
   ShieldCheck,
   LogOut,
-  Database,
-  Cpu,
-  Scale,
-  Sparkles,
-  Gift,
-  Mic,
   Code,
-  Check,
+  Sparkles,
   Pause,
   Play,
-  RotateCcw,
+  X,
+  Check,
+  Cpu,
 } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -23,6 +19,7 @@ interface SettingsViewProps {
   stats: QueueStats;
   onLogout: () => void;
   onTogglePause: () => void;
+  onClose?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -30,6 +27,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   stats,
   onLogout,
   onTogglePause,
+  onClose,
 }) => {
   // Feature module preferences stored in localStorage
   const [autofill, setAutofill] = useState<boolean>(() => {
@@ -44,6 +42,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     return localStorage.getItem('whatschedule_voice') !== 'false';
   });
 
+  // Escape key handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && onClose) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const toggleFeature = (key: string, current: boolean, setter: (val: boolean) => void) => {
     const next = !current;
     setter(next);
@@ -51,136 +60,151 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   return (
-    <div className="flex-1 h-full bg-[#F6F9F7] dark:bg-[#101815] flex flex-col overflow-y-auto select-none transition-colors duration-150 p-6 sm:p-8 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-[#DCE7E1] dark:border-[#2D3D35]">
+    <div className="flex flex-col h-full bg-[#121A16] text-[#F2F7F4] select-none rounded-3xl overflow-hidden">
+      {/* Header Bar */}
+      <div className="flex items-center justify-between p-6 border-b border-[#23332B] bg-[#16211C] shrink-0">
         <div className="flex items-center gap-3">
-          <SettingsIcon className="w-5 h-5 text-[#087F5B] dark:text-[#25C993]" />
+          <div className="w-10 h-10 rounded-2xl bg-[#1D3830] border border-[#2DD4A7]/20 flex items-center justify-center text-[#2DD4A7]">
+            <SettingsIcon className="w-5 h-5" />
+          </div>
           <div>
-            <h1 className="text-xl font-bold text-[#16231F] dark:text-[#F2F7F4] tracking-tight">
+            <h2 className="text-base font-bold text-white tracking-tight">
               Settings & Preferences
-            </h1>
-            <p className="text-xs text-[#5D7168] dark:text-[#8A9A91]">
-              Feature management, WhatsApp connection, and system configuration
+            </h2>
+            <p className="text-xs text-[#8A9A91]">
+              Manage scheduling features, WhatsApp connection, and system behavior
             </p>
           </div>
         </div>
+
+        {/* Working Close Button */}
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-xl text-[#8A9A91] hover:text-white hover:bg-white/5 border border-transparent hover:border-[#273830] transition-colors flex items-center gap-1.5 cursor-pointer"
+            title="Close Settings (Esc)"
+            aria-label="Close Settings"
+          >
+            <span className="text-[11px] font-mono text-[#8A9A91] hidden sm:inline">ESC</span>
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
-      <div className="max-w-4xl space-y-6">
+      {/* Scrollable Content Body */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         
-        {/* Feature Management & Extensions Module (Requested by user) */}
-        <div className="bg-white dark:bg-[#17211D] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-3xl p-6 sm:p-7 shadow-2xs space-y-4">
+        {/* Section 1: Feature Modules & Smart Autofill */}
+        <div className="bg-[#17231E] border border-[#26382E] rounded-2xl p-5 shadow-sm space-y-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-[#E5F5EF] dark:bg-[#1D3830] rounded-2xl text-[#087F5B] dark:text-[#25C993]">
-              <Sparkles className="w-6 h-6" />
+            <div className="p-2.5 bg-[#1D3830] rounded-xl text-[#2DD4A7]">
+              <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-[#16231F] dark:text-[#F2F7F4]">
+              <h3 className="text-sm font-bold text-white">
                 Feature Modules & Productivity Tools
-              </h2>
-              <p className="text-xs text-[#5D7168] dark:text-[#8A9A91]">
-                Enable or disable optional tools to keep your workflow simple and tailored
+              </h3>
+              <p className="text-xs text-[#8A9A91]">
+                Enable or disable workflow assistants to customize your scheduling workspace
               </p>
             </div>
           </div>
 
-          <div className="divide-y divide-[#DCE7E1] dark:divide-[#2D3D35] pt-2">
-            
-            {/* Feature 1: Smart Autofill */}
-            <div className="py-3.5 flex items-center justify-between gap-4">
+          <div className="divide-y divide-[#23332B] pt-1">
+            {/* Autofill Switch */}
+            <div className="py-3 flex items-center justify-between gap-4">
               <div className="space-y-0.5">
-                <span className="text-xs font-bold text-[#16231F] dark:text-[#F2F7F4] block">
+                <span className="text-xs font-semibold text-white block">
                   Smart Autofill Suggestions
                 </span>
-                <span className="text-[11px] text-[#5D7168] dark:text-[#8A9A91] block">
-                  Suggests autocomplete phrases and polite closings in the composer.
+                <span className="text-[11px] text-[#8A9A91] block">
+                  Suggests quick-reply greetings, occasion phrases, and closings in the composer.
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => toggleFeature('whatschedule_autofill', autofill, setAutofill)}
-                className={`w-12 h-6 rounded-full transition-colors p-0.5 ${
-                  autofill ? 'bg-[#087F5B] dark:bg-[#25C993]' : 'bg-[#DCE7E1] dark:bg-[#2D3D35]'
+                className={`w-12 h-6 rounded-full transition-colors p-0.5 cursor-pointer ${
+                  autofill ? 'bg-[#2DD4A7]' : 'bg-[#2D3D35]'
                 }`}
                 aria-label="Toggle Autofill"
               >
                 <div
-                  className={`w-5 h-5 rounded-full bg-white dark:bg-[#101815] shadow-xs transition-transform ${
+                  className={`w-5 h-5 rounded-full bg-[#101815] shadow-xs transition-transform ${
                     autofill ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
 
-            {/* Feature 2: Birthday & Occasion Templates */}
-            <div className="py-3.5 flex items-center justify-between gap-4">
+            {/* Templates Switch */}
+            <div className="py-3 flex items-center justify-between gap-4">
               <div className="space-y-0.5">
-                <span className="text-xs font-bold text-[#16231F] dark:text-[#F2F7F4] block">
-                  Birthday & Occasion Templates
+                <span className="text-xs font-semibold text-white block">
+                  Occasion & Holiday Templates
                 </span>
-                <span className="text-[11px] text-[#5D7168] dark:text-[#8A9A91] block">
-                  Pre-made greetings in 7 languages (English, Spanish, Hindi, Urdu, Arabic, French, German).
+                <span className="text-[11px] text-[#8A9A91] block">
+                  Access 7-language greetings for birthdays, meetings, and business updates.
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => toggleFeature('whatschedule_templates', templates, setTemplates)}
-                className={`w-12 h-6 rounded-full transition-colors p-0.5 ${
-                  templates ? 'bg-[#087F5B] dark:bg-[#25C993]' : 'bg-[#DCE7E1] dark:bg-[#2D3D35]'
+                className={`w-12 h-6 rounded-full transition-colors p-0.5 cursor-pointer ${
+                  templates ? 'bg-[#2DD4A7]' : 'bg-[#2D3D35]'
                 }`}
                 aria-label="Toggle Templates"
               >
                 <div
-                  className={`w-5 h-5 rounded-full bg-white dark:bg-[#101815] shadow-xs transition-transform ${
+                  className={`w-5 h-5 rounded-full bg-[#101815] shadow-xs transition-transform ${
                     templates ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
 
-            {/* Feature 3: Voice Memo Scheduler */}
-            <div className="py-3.5 flex items-center justify-between gap-4">
+            {/* Voice Memo Switch */}
+            <div className="py-3 flex items-center justify-between gap-4">
               <div className="space-y-0.5">
-                <span className="text-xs font-bold text-[#16231F] dark:text-[#F2F7F4] block">
-                  Voice Memo & Audio Scheduler
+                <span className="text-xs font-semibold text-white block">
+                  Voice Memo & Audio Notes
                 </span>
-                <span className="text-[11px] text-[#5D7168] dark:text-[#8A9A91] block">
-                  Allows scheduling audio recordings (.m4a, .mp3, .ogg) as native voice notes.
+                <span className="text-[11px] text-[#8A9A91] block">
+                  Enables audio file scheduling as WhatsApp push-to-talk voice notes.
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => toggleFeature('whatschedule_voice', voiceScheduler, setVoiceScheduler)}
-                className={`w-12 h-6 rounded-full transition-colors p-0.5 ${
-                  voiceScheduler ? 'bg-[#087F5B] dark:bg-[#25C993]' : 'bg-[#DCE7E1] dark:bg-[#2D3D35]'
+                className={`w-12 h-6 rounded-full transition-colors p-0.5 cursor-pointer ${
+                  voiceScheduler ? 'bg-[#2DD4A7]' : 'bg-[#2D3D35]'
                 }`}
-                aria-label="Toggle Voice Scheduler"
+                aria-label="Toggle Voice Memo Scheduler"
               >
                 <div
-                  className={`w-5 h-5 rounded-full bg-white dark:bg-[#101815] shadow-xs transition-transform ${
+                  className={`w-5 h-5 rounded-full bg-[#101815] shadow-xs transition-transform ${
                     voiceScheduler ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 />
               </button>
             </div>
-
           </div>
         </div>
 
-        {/* Connection & Linked Device Card */}
-        <div className="bg-white dark:bg-[#17211D] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-3xl p-6 sm:p-7 shadow-2xs space-y-4">
+        {/* Section 2: WhatsApp Linked Session */}
+        <div className="bg-[#17231E] border border-[#26382E] rounded-2xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-[#E5F5EF] dark:bg-[#1D3830] rounded-2xl text-[#087F5B] dark:text-[#25C993]">
-                <Smartphone className="w-6 h-6" />
+              <div className="p-2.5 bg-[#1D3830] rounded-xl text-[#2DD4A7]">
+                <Smartphone className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-[#16231F] dark:text-[#F2F7F4]">
+                <h3 className="text-sm font-bold text-white">
                   WhatsApp Linked Session
-                </h2>
-                <p className="text-xs text-[#5D7168] dark:text-[#8A9A91]">
-                  Connected via WhatsApp Multi-Device Protocol
+                </h3>
+                <p className="text-xs text-[#8A9A91]">
+                  Connected via Baileys Multi-Device Socket
                 </p>
               </div>
             </div>
@@ -188,37 +212,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <span
               className={`text-xs px-3 py-1 rounded-full font-semibold uppercase ${
                 status.state === 'connected'
-                  ? 'bg-[#E5F5EF] text-[#087F5B] dark:bg-[#1D3830] dark:text-[#25C993]'
-                  : 'bg-[#9A6700]/15 text-[#9A6700] dark:text-[#F3C969]'
+                  ? 'bg-[#1D3830] text-[#2DD4A7] border border-[#2DD4A7]/30'
+                  : 'bg-[#9A6700]/20 text-[#F3C969] border border-[#F3C969]/30'
               }`}
             >
               {status.state}
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-[#5D7168] dark:text-[#8A9A91]">
-            <div className="p-3.5 rounded-2xl bg-[#F0F5F2] dark:bg-[#1E2B25] border border-[#DCE7E1] dark:border-[#2D3D35]">
-              <span className="block text-[10px] uppercase font-semibold text-[#788980]">Session User ID</span>
-              <span className="font-mono text-[#16231F] dark:text-[#F2F7F4] text-xs font-semibold">
-                {status.user?.id || 'Active'}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="p-3 rounded-xl bg-[#131B17] border border-[#23332B]">
+              <span className="block text-[10px] uppercase font-semibold text-[#8A9A91]">Connected Account</span>
+              <span className="font-mono text-white text-xs font-semibold">
+                {status.user?.id ? status.user.id.replace('@s.whatsapp.net', '') : 'Active Session'}
               </span>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-[#F0F5F2] dark:bg-[#1E2B25] border border-[#DCE7E1] dark:border-[#2D3D35]">
-              <span className="block text-[10px] uppercase font-semibold text-[#788980]">User Display Name</span>
-              <span className="font-semibold text-[#16231F] dark:text-[#F2F7F4] text-xs">
+            <div className="p-3 rounded-xl bg-[#131B17] border border-[#23332B]">
+              <span className="block text-[10px] uppercase font-semibold text-[#8A9A91]">Display Name</span>
+              <span className="font-semibold text-white text-xs">
                 {status.user?.name || 'WhatsSchedule Client'}
               </span>
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-2">
-            <span className="text-xs text-[#788980] dark:text-[#8A9A91]">
+            <span className="text-xs text-[#8A9A91]">
               Unlinking terminates the encrypted session on this device.
             </span>
             <button
+              type="button"
               onClick={onLogout}
-              className="px-4 py-2 bg-[#B42318]/10 hover:bg-[#B42318]/20 text-[#B42318] dark:text-[#FF938B] text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors"
+              className="px-3.5 py-2 bg-[#2D1615] hover:bg-[#3D1D1C] text-[#FF938B] border border-[#5B2321] text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Unlink WhatsApp Session</span>
@@ -226,23 +251,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
-        {/* Emergency Pause Circuit Breaker */}
-        <div className="bg-white dark:bg-[#17211D] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-3xl p-6 sm:p-7 shadow-2xs space-y-3">
-          <div className="flex items-center justify-between">
+        {/* Section 3: Emergency Queue Circuit Breaker */}
+        <div className="bg-[#17231E] border border-[#26382E] rounded-2xl p-5 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-base font-bold text-[#16231F] dark:text-[#F2F7F4]">
+              <h3 className="text-sm font-bold text-white">
                 Emergency Queue Circuit Breaker
               </h3>
-              <p className="text-xs text-[#5D7168] dark:text-[#8A9A91] mt-0.5">
-                Immediately freeze all outgoing message dispatches in case of accidental scheduling
+              <p className="text-xs text-[#8A9A91] mt-0.5">
+                Instantly freeze all scheduled message dispatches in case of accidental scheduling
               </p>
             </div>
 
             <button
+              type="button"
               onClick={onTogglePause}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 ${
                 stats.isPaused
-                  ? 'bg-[#087F5B] text-white hover:bg-[#06684B]'
+                  ? 'bg-[#2DD4A7] text-[#0D3027] hover:bg-[#25C993]'
                   : 'bg-[#B42318] text-white hover:bg-[#921E14]'
               }`}
             >
@@ -252,41 +278,53 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
-        {/* Developer REST API & Webhooks Card */}
-        <div className="bg-white dark:bg-[#17211D] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-3xl p-6 sm:p-7 shadow-2xs space-y-3">
+        {/* Section 4: Developer REST API */}
+        <div className="bg-[#17231E] border border-[#26382E] rounded-2xl p-5 shadow-sm space-y-3">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-[#E5F5EF] dark:bg-[#1D3830] rounded-2xl text-[#087F5B] dark:text-[#25C993]">
-              <Code className="w-6 h-6" />
+            <div className="p-2.5 bg-[#1D3830] rounded-xl text-[#2DD4A7]">
+              <Code className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-[#16231F] dark:text-[#F2F7F4]">
+              <h3 className="text-sm font-bold text-white">
                 Developer REST API & Integrations
               </h3>
-              <p className="text-xs text-[#5D7168] dark:text-[#8A9A91]">
-                Full programmatic access to schedule, send now, and query queue statistics
+              <p className="text-xs text-[#8A9A91]">
+                Programmatic access to schedule, send now, and inspect queues
               </p>
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-[#F0F5F2] dark:bg-[#1E2B25] border border-[#DCE7E1] dark:border-[#2D3D35] text-xs space-y-2">
-            <p className="font-semibold text-[#16231F] dark:text-[#F2F7F4]">
-              Local Endpoint: <code className="font-mono text-[#087F5B] dark:text-[#25C993]">http://localhost:5001/api</code>
+          <div className="p-3.5 rounded-xl bg-[#131B17] border border-[#23332B] text-xs space-y-1.5">
+            <p className="font-semibold text-white">
+              Local Endpoint: <code className="font-mono text-[#2DD4A7]">http://localhost:5001/api</code>
             </p>
-            <p className="text-[#5D7168] dark:text-[#8A9A91]">
-              Read full documentation, curl snippets, and schemas in <code className="font-mono">API_DOCUMENTATION.md</code>.
+            <p className="text-[#8A9A91]">
+              Full OpenAPI documentation and curl snippets available in <code className="font-mono text-white">API_DOCUMENTATION.md</code>.
             </p>
           </div>
         </div>
 
-        {/* Ownership & Copyright */}
-        <div className="p-4 text-center text-xs text-[#788980] dark:text-[#8A9A91] space-y-1">
+        {/* Section 5: Ownership & Copyright */}
+        <div className="text-center text-xs text-[#8A9A91] pt-2 space-y-1">
           <p>© {new Date().getFullYear()} Aroon Kumar. All Rights Reserved.</p>
-          <p className="text-[11px]">
-            WhatsSchedule is an independent open-source solution. WhatsApp is a registered trademark of Meta Platforms, Inc.
+          <p className="text-[11px] text-[#5D7168]">
+            WhatsSchedule is an independent open-source solution. WhatsApp is a trademark of Meta Platforms, Inc.
           </p>
         </div>
-
       </div>
+
+      {/* Footer Bar with Close Button */}
+      {onClose && (
+        <div className="p-4 border-t border-[#23332B] bg-[#16211C] flex justify-end shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2 bg-[#2DD4A7] hover:bg-[#25C993] text-[#0D3027] text-xs font-bold rounded-xl transition-colors cursor-pointer"
+          >
+            Done / Close Settings
+          </button>
+        </div>
+      )}
     </div>
   );
 };

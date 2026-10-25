@@ -33,22 +33,14 @@ export class ApiController {
   }
   // Security & Master PIN Endpoints
   public static async getAuthStatus(req: Request, res: Response) {
-    try {
-      const isPinSet = await authService.isPinConfigured();
-      const authHeader = req.headers.authorization;
-      const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
-      const isUnlocked = isPinSet ? authService.validateToken(token) : false;
-
-      return res.json({
-        success: true,
-        data: {
-          isPinSet,
-          isUnlocked: !isPinSet || isUnlocked, // If no PIN is configured yet, allows setup
-        },
-      });
-    } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
-    }
+    // Lock feature removed per user request: always unlocked
+    return res.json({
+      success: true,
+      data: {
+        isPinSet: false,
+        isUnlocked: true,
+      },
+    });
   }
 
   public static async setupPin(req: Request, res: Response) {

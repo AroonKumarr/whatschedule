@@ -18,7 +18,6 @@ import {
   AlertTriangle,
   RotateCcw,
   Trash2,
-  Lock,
   Pause,
   Play,
   MessageSquarePlus,
@@ -38,7 +37,6 @@ interface SidebarProps {
   stats: QueueStats;
   onRetry: (id: string) => void;
   onDelete: (id: string) => void;
-  onLock: () => void;
   onTogglePause: () => void;
   themeMode: ThemeMode;
   onToggleTheme: () => void;
@@ -55,7 +53,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   stats,
   onRetry,
   onDelete,
-  onLock,
   onTogglePause,
   themeMode,
   onToggleTheme,
@@ -179,22 +176,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </nav>
 
-        {/* Right Tools (Theme Toggle, Emergency Pause, Master PIN Lock) */}
+        {/* Right Tools (Theme Toggle, Emergency Pause) */}
         <div className="flex items-center gap-1.5">
           <ThemeToggle
             themeMode={themeMode}
             onToggleTheme={onToggleTheme}
             className="p-1.5"
           />
-
-          <button
-            onClick={onLock}
-            className="p-1.5 text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#B42318] rounded-xl border border-transparent hover:border-[#B42318]/30 transition-colors"
-            title="Lock WhatsSchedule (Master PIN)"
-            aria-label="Lock WhatsSchedule"
-          >
-            <Lock className="w-4 h-4" />
-          </button>
         </div>
       </div>
 

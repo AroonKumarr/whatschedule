@@ -10,31 +10,31 @@ const {
 const { PhoneLinkService } = require('../dist/services/phone-link.service');
 
 test('WhatsApp Phone Pairing Normalizer Test Suite', async (t) => {
-  await t.test('Normalizes Pakistan number with leading 0 (03310390837 -> 923310390837)', () => {
-    assert.strictEqual(normalizePhoneNumber('03310390837', '92'), '923310390837');
+  await t.test('Normalizes Pakistan number with leading 0 (03001234567 -> 923001234567)', () => {
+    assert.strictEqual(normalizePhoneNumber('03001234567', '92'), '923001234567');
     assert.strictEqual(normalizePhoneNumber('0300 1234567', '92'), '923001234567');
   });
 
-  await t.test('Normalizes Pakistan number with spaces, parentheses and hyphens (0331-0390837)', () => {
-    assert.strictEqual(normalizePhoneNumber('0331-0390837', '92'), '923310390837');
+  await t.test('Normalizes Pakistan number with spaces, parentheses and hyphens (0300-1234567)', () => {
+    assert.strictEqual(normalizePhoneNumber('0300-1234567', '92'), '923001234567');
     assert.strictEqual(normalizePhoneNumber('(0300) 123-4567', '92'), '923001234567');
   });
 
-  await t.test('Normalizes 10-digit number without CC (3310390837 -> 923310390837)', () => {
-    assert.strictEqual(normalizePhoneNumber('3310390837', '92'), '923310390837');
+  await t.test('Normalizes 10-digit number without CC (3001234567 -> 923001234567)', () => {
+    assert.strictEqual(normalizePhoneNumber('3001234567', '92'), '923001234567');
   });
 
-  await t.test('Normalizes Pakistan number with redundant zero after CC (9203310390837 -> 923310390837)', () => {
-    assert.strictEqual(normalizePhoneNumber('9203310390837', '92'), '923310390837');
-    assert.strictEqual(normalizePhoneNumber('+9203310390837', '92'), '923310390837');
+  await t.test('Normalizes Pakistan number with redundant zero after CC (9203001234567 -> 923001234567)', () => {
+    assert.strictEqual(normalizePhoneNumber('9203001234567', '92'), '923001234567');
+    assert.strictEqual(normalizePhoneNumber('+9203001234567', '92'), '923001234567');
   });
 
-  await t.test('Normalizes Pakistan number with explicit + (+92 331 0390837 -> 923310390837)', () => {
-    assert.strictEqual(normalizePhoneNumber('+92 331 0390837', '92'), '923310390837');
+  await t.test('Normalizes Pakistan number with explicit + (+92 300 1234567 -> 923001234567)', () => {
+    assert.strictEqual(normalizePhoneNumber('+92 300 1234567', '92'), '923001234567');
   });
 
-  await t.test('Preserves full international number already starting with 92 (923310390837)', () => {
-    assert.strictEqual(normalizePhoneNumber('923310390837', '92'), '923310390837');
+  await t.test('Preserves full international number already starting with 92 (923001234567)', () => {
+    assert.strictEqual(normalizePhoneNumber('923001234567', '92'), '923001234567');
   });
 
   await t.test('Normalizes US number with country code +1', () => {
@@ -43,7 +43,7 @@ test('WhatsApp Phone Pairing Normalizer Test Suite', async (t) => {
 
   await t.test('Rejects numbers that are too short (< 10 digits)', () => {
     assert.throws(() => normalizePhoneNumber('12345'), /too short/);
-    assert.throws(() => normalizePhoneNumber('0331'), /too short/);
+    assert.throws(() => normalizePhoneNumber('0300'), /too short/);
   });
 
   await t.test('Rejects numbers that are too long (> 15 digits)', () => {
@@ -56,7 +56,7 @@ test('WhatsApp Phone Pairing Normalizer Test Suite', async (t) => {
   });
 
   await t.test('Masks phone numbers and pairing codes for structured logging security', () => {
-    assert.strictEqual(maskPhoneNumber('923310390837'), '92331****837');
+    assert.strictEqual(maskPhoneNumber('923001234567'), '92300****567');
     assert.strictEqual(maskPairingCode('ABCD1234'), 'AB**-**34');
     assert.strictEqual(maskPairingCode('ABCD-1234'), 'AB**-**34');
   });
@@ -75,7 +75,7 @@ test('PhoneLinkService State Machine & Lifecycle Test Suite', async (t) => {
   await t.test('Status transitions: code_ready and countdown calculation', () => {
     const mockSession = {
       userId: testUserId,
-      phone: '923310390837',
+      phone: '923001234567',
       status: 'code_ready',
       code: 'ABCD1234',
       formattedCode: 'ABCD-1234',
