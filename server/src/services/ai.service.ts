@@ -38,7 +38,8 @@ class AIService {
   private tokenBudgetAlertThreshold = 500000;
 
   constructor() {
-    setInterval(() => this.pruneCache(), 60 * 60 * 1000);
+    const timer = setInterval(() => this.pruneCache(), 60 * 60 * 1000);
+    if (timer.unref) timer.unref();
   }
 
   private pruneCache() {

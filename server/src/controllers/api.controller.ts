@@ -235,6 +235,19 @@ export class ApiController {
     }
   }
 
+  public static async sendNow(req: Request, res: Response) {
+    try {
+      const id = String(req.params.id);
+      const result = await schedulerService.sendNow(id);
+      if (!result.success) {
+        return res.status(400).json({ success: false, error: result.message, data: result.record });
+      }
+      return res.json({ success: true, message: result.message, data: result.record });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
   public static async deleteSchedule(req: Request, res: Response) {
     try {
       const id = String(req.params.id);

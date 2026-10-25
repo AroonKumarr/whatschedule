@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { ScheduledMessage, WhatsAppStatus, QueueStats } from '../types';
 import { ThemeMode } from '../hooks/useTheme';
 import {
-  MessageSquarePlus,
+  Home,
+  Send,
   Calendar,
-  FolderOpen,
+  Inbox,
   Settings,
   Search,
   Video,
@@ -21,16 +22,19 @@ import {
   Play,
   Sun,
   Moon,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { format, isToday, isTomorrow } from 'date-fns';
+
+export type MainNavView = 'home' | 'send-now' | 'schedule' | 'activity' | 'settings';
 
 interface SidebarProps {
   schedules: ScheduledMessage[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onOpenComposer: () => void;
-  activeView: 'chats' | 'calendar' | 'vault' | 'settings';
-  setActiveView: (view: 'chats' | 'calendar' | 'vault' | 'settings') => void;
+  activeView: MainNavView;
+  setActiveView: (view: MainNavView) => void;
   status: WhatsAppStatus;
   stats: QueueStats;
   onRetry: (id: string) => void;
@@ -84,39 +88,104 @@ export const Sidebar: React.FC<SidebarProps> = ({
   });
 
   return (
-    <aside className="w-full md:w-[380px] lg:w-[420px] h-full bg-white dark:bg-[#17211D] border-r border-[#DCE7E1] dark:border-[#2D3D35] flex flex-col shrink-0 select-none transition-colors duration-150">
-      {/* Top Bar Header */}
-      <div className="h-[60px] bg-[#F0F5F2] dark:bg-[#1E2B25] px-4 flex items-center justify-between border-b border-[#DCE7E1] dark:border-[#2D3D35] transition-colors duration-150">
-        {/* User Info & Connection Badge */}
-        <div className="flex items-center gap-3">
+    <aside className="w-full md:w-[380px] lg:w-[410px] h-full bg-white dark:bg-[#17211D] border-r border-[#DCE7E1] dark:border-[#2D3D35] flex flex-col shrink-0 select-none transition-colors duration-150">
+      {/* Top Bar Header with 5-Item Primary Navigation */}
+      <div className="h-[64px] bg-[#F0F5F2] dark:bg-[#1E2B25] px-3.5 flex items-center justify-between border-b border-[#DCE7E1] dark:border-[#2D3D35] transition-colors duration-150">
+        
+        {/* User Avatar & Connection Status */}
+        <div className="flex items-center gap-2.5">
           <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-[#087F5B] dark:bg-[#25C993] flex items-center justify-center text-white dark:text-[#0D3027] font-bold text-sm shadow-xs">
+            <div className="w-9 h-9 rounded-full bg-[#087F5B] dark:bg-[#25C993] flex items-center justify-center text-white dark:text-[#0D3027] font-bold text-xs shadow-xs">
               {status.user?.name ? status.user.name.charAt(0).toUpperCase() : 'W'}
             </div>
             <span
-              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-[#1E2B25] ${
+              className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-[#1E2B25] ${
                 status.state === 'connected' ? 'bg-[#25C993]' : 'bg-[#9A6700] dark:bg-[#F3C969]'
               }`}
-              title={status.state === 'connected' ? 'WhatsApp Connected' : 'Connecting...'}
+              title={status.state === 'connected' ? 'Connected' : 'Connecting...'}
             />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-[#16231F] dark:text-[#F2F7F4] truncate max-w-[120px]">
-              {status.user?.name || 'WhatsSchedule'}
-            </span>
-            <span className="text-[11px] text-[#5D7168] dark:text-[#8A9A91]">
-              {status.state === 'connected' ? 'Connected' : 'Connecting...'}
-            </span>
           </div>
         </div>
 
-        {/* View Switchers, Theme Toggle & Controls */}
-        <div className="flex items-center gap-1">
-          {/* Theme Toggle Button */}
+        {/* 5 Core Navigation Buttons (Requested by user) */}
+        <nav aria-label="Main Navigation" className="flex items-center gap-1 bg-white/70 dark:bg-[#17211D]/70 p-1 rounded-2xl border border-[#DCE7E1] dark:border-[#2D3D35]">
+          {/* 1. Home */}
+          <button
+            onClick={() => setActiveView('home')}
+            className={`p-2 rounded-xl transition-colors ${
+              activeView === 'home'
+                ? 'text-[#087F5B] dark:text-[#25C993] bg-[#E5F5EF] dark:bg-[#1D3830] font-bold shadow-2xs'
+                : 'text-[#5D7168] dark:text-[#8A9A91] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
+            }`}
+            title="Home Dashboard"
+            aria-label="Home Dashboard"
+          >
+            <Home className="w-4 h-4" />
+          </button>
+
+          {/* 2. Send Now */}
+          <button
+            onClick={() => setActiveView('send-now')}
+            className={`p-2 rounded-xl transition-colors ${
+              activeView === 'send-now'
+                ? 'text-[#087F5B] dark:text-[#25C993] bg-[#E5F5EF] dark:bg-[#1D3830] font-bold shadow-2xs'
+                : 'text-[#5D7168] dark:text-[#8A9A91] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
+            }`}
+            title="Send Now (Instant Dispatch)"
+            aria-label="Send Now"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+
+          {/* 3. Schedule */}
+          <button
+            onClick={() => setActiveView('schedule')}
+            className={`p-2 rounded-xl transition-colors ${
+              activeView === 'schedule'
+                ? 'text-[#087F5B] dark:text-[#25C993] bg-[#E5F5EF] dark:bg-[#1D3830] font-bold shadow-2xs'
+                : 'text-[#5D7168] dark:text-[#8A9A91] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
+            }`}
+            title="Schedule for Later"
+            aria-label="Schedule for Later"
+          >
+            <Calendar className="w-4 h-4" />
+          </button>
+
+          {/* 4. Activity */}
+          <button
+            onClick={() => setActiveView('activity')}
+            className={`p-2 rounded-xl transition-colors ${
+              activeView === 'activity'
+                ? 'text-[#087F5B] dark:text-[#25C993] bg-[#E5F5EF] dark:bg-[#1D3830] font-bold shadow-2xs'
+                : 'text-[#5D7168] dark:text-[#8A9A91] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
+            }`}
+            title="Activity & Message Management"
+            aria-label="Activity & Message Management"
+          >
+            <Inbox className="w-4 h-4" />
+          </button>
+
+          {/* 5. Settings */}
+          <button
+            onClick={() => setActiveView('settings')}
+            className={`p-2 rounded-xl transition-colors ${
+              activeView === 'settings'
+                ? 'text-[#087F5B] dark:text-[#25C993] bg-[#E5F5EF] dark:bg-[#1D3830] font-bold shadow-2xs'
+                : 'text-[#5D7168] dark:text-[#8A9A91] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
+            }`}
+            title="Settings & Preferences"
+            aria-label="Settings & Preferences"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        </nav>
+
+        {/* Right Tools (Theme Toggle, Emergency Pause, Master PIN Lock) */}
+        <div className="flex items-center gap-0.5">
           <button
             onClick={onToggleTheme}
-            className="p-2 text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#087F5B] dark:hover:text-[#25C993] rounded-full transition-transform active:scale-95"
-            title={`Toggle Theme (Current: ${themeMode.toUpperCase()})`}
+            className="p-1.5 text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#087F5B] dark:hover:text-[#25C993] rounded-lg transition-transform active:scale-95"
+            title={`Toggle Theme (${themeMode.toUpperCase()})`}
             aria-label="Toggle Theme"
           >
             <span className="dark:hidden">
@@ -128,87 +197,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           <button
-            onClick={() => setActiveView('chats')}
-            className={`p-2 rounded-full transition-colors ${
-              activeView === 'chats'
-                ? 'text-[#087F5B] dark:text-[#25C993] bg-white dark:bg-[#17211D] shadow-xs'
-                : 'text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
-            }`}
-            title="Scheduled Messages"
-          >
-            <Clock className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => setActiveView('calendar')}
-            className={`p-2 rounded-full transition-colors ${
-              activeView === 'calendar'
-                ? 'text-[#087F5B] dark:text-[#25C993] bg-white dark:bg-[#17211D] shadow-xs'
-                : 'text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
-            }`}
-            title="Calendar View"
-          >
-            <Calendar className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => setActiveView('vault')}
-            className={`p-2 rounded-full transition-colors ${
-              activeView === 'vault'
-                ? 'text-[#087F5B] dark:text-[#25C993] bg-white dark:bg-[#17211D] shadow-xs'
-                : 'text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
-            }`}
-            title="Media Vault"
-          >
-            <FolderOpen className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => setActiveView('settings')}
-            className={`p-2 rounded-full transition-colors ${
-              activeView === 'settings'
-                ? 'text-[#087F5B] dark:text-[#25C993] bg-white dark:bg-[#17211D] shadow-xs'
-                : 'text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
-            }`}
-            title="Settings & Info"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-
-          {/* Emergency Pause Switch */}
-          <button
-            onClick={onTogglePause}
-            className={`p-2 rounded-full transition-colors ${
-              stats.isPaused
-                ? 'bg-[#B42318] text-white animate-pulse'
-                : 'text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#B42318]'
-            }`}
-            title={stats.isPaused ? 'Resume Scheduled Dispatches' : 'Emergency Pause: Halt All Dispatches'}
-          >
-            {stats.isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-          </button>
-
-          {/* Master PIN Lock Button */}
-          <button
             onClick={onLock}
-            className="p-2 text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#B42318] rounded-full transition-colors"
+            className="p-1.5 text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#B42318] rounded-lg transition-colors"
             title="Lock WhatsSchedule (Master PIN)"
+            aria-label="Lock WhatsSchedule"
           >
             <Lock className="w-4 h-4" />
-          </button>
-
-          {/* New Schedule Button */}
-          <button
-            onClick={onOpenComposer}
-            className="ml-1 p-2 bg-[#087F5B] hover:bg-[#06684B] dark:bg-[#25C993] dark:hover:bg-[#46D9A6] text-white dark:text-[#0D3027] rounded-full transition-transform active:scale-95 shadow-xs"
-            title="New Schedule"
-          >
-            <MessageSquarePlus className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Emergency Pause Warning Banner */}
+      {/* Emergency Pause Banner (if active) */}
       {stats.isPaused && (
         <div className="bg-[#B42318]/15 border-b border-[#B42318]/30 px-3 py-2 flex items-center justify-between text-xs text-[#B42318] dark:text-[#FF938B]">
           <span className="font-semibold flex items-center gap-1.5">
@@ -217,7 +216,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </span>
           <button
             onClick={onTogglePause}
-            className="text-[11px] font-bold text-white bg-[#B42318] px-2 py-0.5 rounded hover:bg-[#921E14]"
+            className="text-[10px] font-bold text-white bg-[#B42318] px-2 py-0.5 rounded hover:bg-[#921E14]"
           >
             Resume
           </button>
@@ -225,74 +224,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Search Bar */}
-      <div className="p-2 border-b border-[#DCE7E1] dark:border-[#2D3D35] bg-white dark:bg-[#17211D] transition-colors duration-150">
-        <div className="relative flex items-center bg-[#F0F5F2] dark:bg-[#1E2B25] rounded-xl px-3 py-1.5 text-sm transition-colors duration-150 border border-transparent focus-within:border-[#087F5B] dark:focus-within:border-[#25C993]">
-          <Search className="w-4 h-4 text-[#788980] dark:text-[#8A9A91] mr-2 shrink-0" />
+      <div className="p-2.5 border-b border-[#DCE7E1] dark:border-[#2D3D35] bg-white dark:bg-[#17211D]">
+        <div className="relative flex items-center bg-[#F0F5F2] dark:bg-[#1E2B25] rounded-xl px-3 py-1.5 text-xs border border-transparent focus-within:border-[#087F5B] dark:focus-within:border-[#25C993]">
+          <Search className="w-3.5 h-3.5 text-[#788980] dark:text-[#8A9A91] mr-2 shrink-0" />
           <input
             type="text"
-            placeholder="Search contacts or schedules..."
+            placeholder="Search queue & messages..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-transparent text-[#16231F] dark:text-[#F2F7F4] placeholder-[#788980] dark:placeholder-[#8A9A91] text-sm focus:outline-none"
+            className="w-full bg-transparent text-[#16231F] dark:text-[#F2F7F4] placeholder-[#788980] focus:outline-none text-xs"
           />
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-1 px-3 py-2 border-b border-[#DCE7E1] dark:border-[#2D3D35] text-xs transition-colors duration-150">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-3 py-1 rounded-full transition-colors ${
-            filter === 'all'
-              ? 'bg-[#087F5B] text-white dark:bg-[#25C993] dark:text-[#0D3027] font-semibold shadow-2xs'
-              : 'bg-[#F0F5F2] dark:bg-[#1E2B25] text-[#5D7168] dark:text-[#8A9A91] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
-          }`}
-        >
-          All ({stats.total})
-        </button>
-        <button
-          onClick={() => setFilter('pending')}
-          className={`px-3 py-1 rounded-full transition-colors ${
-            filter === 'pending'
-              ? 'bg-[#087F5B] text-white dark:bg-[#25C993] dark:text-[#0D3027] font-semibold shadow-2xs'
-              : 'bg-[#F0F5F2] dark:bg-[#1E2B25] text-[#5D7168] dark:text-[#8A9A91] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
-          }`}
-        >
-          Pending ({stats.pending})
-        </button>
-        <button
-          onClick={() => setFilter('sent')}
-          className={`px-3 py-1 rounded-full transition-colors ${
-            filter === 'sent'
-              ? 'bg-[#087F5B] text-white dark:bg-[#25C993] dark:text-[#0D3027] font-semibold shadow-2xs'
-              : 'bg-[#F0F5F2] dark:bg-[#1E2B25] text-[#5D7168] dark:text-[#8A9A91] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
-          }`}
-        >
-          Sent ({stats.sent})
-        </button>
-        <button
-          onClick={() => setFilter('failed')}
-          className={`px-3 py-1 rounded-full transition-colors ${
-            filter === 'failed'
-              ? 'bg-[#B42318] text-white font-semibold shadow-2xs'
-              : 'bg-[#F0F5F2] dark:bg-[#1E2B25] text-[#5D7168] dark:text-[#8A9A91] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
-          }`}
-        >
-          Failed ({stats.failed})
-        </button>
+      <div className="flex items-center gap-1 px-3 py-2 border-b border-[#DCE7E1] dark:border-[#2D3D35] text-xs">
+        {(['all', 'pending', 'sent', 'failed'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setFilter(tab)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold capitalize transition-colors ${
+              filter === tab
+                ? 'bg-[#087F5B] text-white dark:bg-[#25C993] dark:text-[#0D3027] shadow-2xs'
+                : 'text-[#5D7168] dark:text-[#8A9A91] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
+            }`}
+          >
+            {tab} ({tab === 'all' ? stats.total : (stats as any)[tab] || 0})
+          </button>
+        ))}
       </div>
 
-      {/* Scheduled Queue List */}
+      {/* Queue List */}
       <div className="flex-1 overflow-y-auto divide-y divide-[#DCE7E1] dark:divide-[#2D3D35]/60">
         {filtered.length === 0 ? (
-          <div className="p-8 text-center text-[#788980] dark:text-[#8A9A91] space-y-3">
-            <Clock className="w-10 h-10 mx-auto opacity-30 text-[#087F5B] dark:text-[#25C993]" />
-            <p className="text-sm">No scheduled messages in this view.</p>
+          <div className="p-8 text-center text-[#788980] dark:text-[#8A9A91] space-y-2">
+            <Clock className="w-8 h-8 mx-auto opacity-30 text-[#087F5B] dark:text-[#25C993]" />
+            <p className="text-xs">No messages in this filter.</p>
             <button
               onClick={onOpenComposer}
-              className="text-xs text-[#087F5B] dark:text-[#25C993] hover:underline font-medium"
+              className="text-xs text-[#087F5B] dark:text-[#25C993] hover:underline font-semibold"
             >
-              + Schedule a new message or video
+              + Create New Dispatch
             </button>
           </div>
         ) : (
@@ -308,70 +280,52 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     : 'hover:bg-[#F0F5F2] dark:hover:bg-[#1E2B25]/70 bg-white dark:bg-[#17211D]'
                 }`}
               >
-                {/* Avatar */}
-                <div className="w-12 h-12 rounded-full bg-[#E5F5EF] dark:bg-[#1E2B25] border border-[#DCE7E1] dark:border-[#2D3D35] flex items-center justify-center shrink-0 text-[#087F5B] dark:text-[#25C993] font-semibold text-base">
+                <div className="w-10 h-10 rounded-full bg-[#E5F5EF] dark:bg-[#1E2B25] border border-[#DCE7E1] dark:border-[#2D3D35] flex items-center justify-center shrink-0 text-[#087F5B] dark:text-[#25C993] font-bold text-xs">
                   {item.recipientName ? item.recipientName.charAt(0).toUpperCase() : '#'}
                 </div>
 
-                {/* Info & Content Preview */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold text-[#16231F] dark:text-[#F2F7F4] truncate">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-xs font-bold text-[#16231F] dark:text-[#F2F7F4] truncate">
                       {item.recipientName || item.recipient.split('@')[0]}
                     </span>
-                    <span className="text-[11px] text-[#788980] dark:text-[#8A9A91] shrink-0 font-light">
+                    <span className="text-[10px] text-[#788980] dark:text-[#8A9A91] shrink-0 font-mono">
                       {formatScheduleTime(item.scheduledAt)}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between text-xs text-[#5D7168] dark:text-[#8A9A91]">
-                    <div className="flex items-center gap-1 truncate max-w-[210px]">
-                      {item.type === 'video' && <Video className="w-3.5 h-3.5 text-[#087F5B] dark:text-[#25C993] shrink-0" />}
-                      {item.type === 'image' && <ImageIcon className="w-3.5 h-3.5 text-[#087F5B] dark:text-[#25C993] shrink-0" />}
-                      {item.type === 'document' && <FileText className="w-3.5 h-3.5 text-[#087F5B] dark:text-[#25C993] shrink-0" />}
-                      
-                      <span className="truncate">
-                        {item.content || item.mediaFileName || 'No caption'}
-                      </span>
-                    </div>
+                    <span className="truncate text-[11px] max-w-[200px]">
+                      {item.content || item.mediaFileName || 'Attachment'}
+                    </span>
 
                     {/* Status Icons */}
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
                       {item.status === 'sent' && (
                         <>
                           {item.deliveryStatus === 'read' ? (
-                            <span title="Read (Seen)">
-                              <CheckCheck className="w-4 h-4 text-[#2867A8] dark:text-[#8BBEFF]" />
-                            </span>
+                            <CheckCheck className="w-3.5 h-3.5 text-[#2867A8] dark:text-[#8BBEFF]" />
                           ) : item.deliveryStatus === 'delivered' ? (
-                            <span title="Delivered to phone">
-                              <CheckCheck className="w-4 h-4 text-[#788980] dark:text-[#8A9A91]" />
-                            </span>
+                            <CheckCheck className="w-3.5 h-3.5 text-[#788980]" />
                           ) : (
-                            <span title="Sent to server">
-                              <Check className="w-4 h-4 text-[#788980] dark:text-[#8A9A91]" />
-                            </span>
+                            <Check className="w-3.5 h-3.5 text-[#788980]" />
                           )}
                         </>
                       )}
                       {item.status === 'pending' && (
-                        <span title="Pending">
-                          <Clock className="w-3.5 h-3.5 text-[#9A6700] dark:text-[#F3C969]" />
-                        </span>
+                        <Clock className="w-3 h-3 text-[#9A6700] dark:text-[#F3C969]" />
                       )}
                       {item.status === 'processing' && (
-                        <span className="w-2 h-2 rounded-full bg-[#087F5B] dark:bg-[#25C993] animate-ping" title="Sending now" />
+                        <span className="w-2 h-2 rounded-full bg-[#087F5B] animate-ping" />
                       )}
                       {item.status === 'failed' && (
-                        <span title="Failed">
-                          <AlertTriangle className="w-3.5 h-3.5 text-[#B42318] dark:text-[#FF938B]" />
-                        </span>
+                        <AlertTriangle className="w-3 h-3 text-[#B42318] dark:text-[#FF938B]" />
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Quick Actions */}
+                {/* Quick Action Buttons */}
                 <div className="hidden group-hover:flex items-center gap-1">
                   {item.status === 'failed' && (
                     <button
@@ -379,10 +333,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         e.stopPropagation();
                         onRetry(item.id);
                       }}
-                      className="p-1 hover:text-[#087F5B] dark:hover:text-[#25C993] text-[#788980] dark:text-[#8A9A91]"
-                      title="Retry immediately"
+                      className="p-1 hover:text-[#087F5B] dark:hover:text-[#25C993] text-[#788980]"
+                      title="Retry"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" />
+                      <RotateCcw className="w-3 h-3" />
                     </button>
                   )}
                   <button
@@ -390,10 +344,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       e.stopPropagation();
                       onDelete(item.id);
                     }}
-                    className="p-1 hover:text-[#B42318] text-[#788980] dark:text-[#8A9A91]"
-                    title="Delete schedule"
+                    className="p-1 hover:text-[#B42318] text-[#788980]"
+                    title="Delete"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
               </div>

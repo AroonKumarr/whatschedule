@@ -164,6 +164,18 @@ export const api = {
     return data.data;
   },
 
+  async sendNow(id: string): Promise<ScheduledMessage> {
+    const res = await fetch(`${API_BASE}/schedules/${id}/send-now`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to dispatch message');
+    }
+    return data.data;
+  },
+
   async deleteSchedule(id: string): Promise<void> {
     await fetch(`${API_BASE}/schedules/${id}`, {
       method: 'DELETE',

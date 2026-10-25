@@ -56,3 +56,8 @@ test('AI Guardrails: Per-user rate limiting triggers after maximum capacity', as
 
   assert.strictEqual(rateLimited, true, 'Calling 20 times in 1 minute must trigger rate limit guardrail');
 });
+
+test.after(async () => {
+  const { prisma } = require('../dist/database/prisma');
+  await prisma.$disconnect();
+});

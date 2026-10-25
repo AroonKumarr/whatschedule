@@ -63,6 +63,7 @@ app.post('/api/queue/pause', requireAuth, ApiController.pauseQueue);
 app.post('/api/queue/resume', requireAuth, ApiController.resumeQueue);
 app.post('/api/schedules/:id/cancel', requireAuth, ApiController.cancelSchedule);
 app.post('/api/schedules/:id/retry', requireAuth, ApiController.retrySchedule);
+app.post('/api/schedules/:id/send-now', requireAuth, ApiController.sendNow);
 app.delete('/api/schedules/:id', requireAuth, ApiController.deleteSchedule);
 app.get('/api/stats', requireAuth, ApiController.getStats);
 

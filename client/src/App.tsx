@@ -4,18 +4,20 @@ import { api, AuthStatus } from './services/api';
 import { useTheme } from './hooks/useTheme';
 import { PinLockScreen } from './components/PinLockScreen';
 import { QRLoginPage } from './components/QRLoginPage';
-import { Sidebar } from './components/Sidebar';
-import { ChatView } from './components/ChatView';
+import { Sidebar, MainNavView } from './components/Sidebar';
+import { HomeView } from './components/HomeView';
+import { SendNowView } from './components/SendNowView';
 import { CalendarView } from './components/CalendarView';
-import { MediaVaultView } from './components/MediaVaultView';
+import { ActivityView } from './components/ActivityView';
 import { SettingsView } from './components/SettingsView';
+import { ChatView } from './components/ChatView';
 import { ComposerModal } from './components/ComposerModal';
 
 export const App: React.FC = () => {
   const { themeMode, toggleTheme } = useTheme();
 
   const [authStatus, setAuthStatus] = useState<AuthStatus>({
-    isPinSet: true, // Defaults to locked until checked
+    isPinSet: true,
     isUnlocked: false,
   });
   const [authChecked, setAuthChecked] = useState(false);
@@ -32,8 +34,11 @@ export const App: React.FC = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [stats, setStats] = useState<QueueStats>({ total: 0, pending: 0, sent: 0, failed: 0 });
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<'chats' | 'calendar' | 'vault' | 'settings'>('chats');
+
+  // 5-Item Primary Navigation (Requested by user: home, send-now, schedule, activity, settings)
+  const [activeView, setActiveView] = useState<MainNavView>('home');
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
 
   // Check Master PIN Security Status on Mount
   useEffect(() => {
@@ -42,7 +47,6 @@ export const App: React.FC = () => {
         const res = await api.getAuthStatus();
         setAuthStatus(res);
       } catch (e) {
-        // Fallback
         setAuthStatus({ isPinSet: false, isUnlocked: true });
       } finally {
         setAuthChecked(true);
@@ -151,12 +155,15 @@ export const App: React.FC = () => {
   };
 
   const handleSendNow = async (id: string) => {
+    setSendingId(id);
     try {
-      await api.retrySchedule(id);
+      await api.sendNow(id);
       refreshSchedules();
       refreshStats();
-    } catch (e) {
-      alert('Failed to trigger immediate send');
+    } catch (e: any) {
+      alert(e?.message || 'Failed to trigger immediate dispatch');
+    } finally {
+      setSendingId(null);
     }
   };
 
@@ -179,13 +186,22 @@ export const App: React.FC = () => {
   };
 
   const handleRetry = async (id: string) => {
-    await handleSendNow(id);
+    setSendingId(id);
+    try {
+      await api.retrySchedule(id);
+      refreshSchedules();
+      refreshStats();
+    } catch (e: any) {
+      alert(e?.message || 'Failed to retry message');
+    } finally {
+      setSendingId(null);
+    }
   };
 
   const handleCreateSchedule = async (formData: FormData) => {
     const created = await api.createSchedule(formData);
     setSelectedId(created.id);
-    setActiveView('chats');
+    setActiveView('activity');
     refreshSchedules();
     refreshStats();
   };
@@ -203,7 +219,7 @@ export const App: React.FC = () => {
     );
   }
 
-  // 1. Master PIN Security Lock (Protects from unauthorized users)
+  // 1. Master PIN Security Lock
   if (!authStatus.isUnlocked) {
     return (
       <PinLockScreen
@@ -243,13 +259,13 @@ export const App: React.FC = () => {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex bg-[#F6F9F7] dark:bg-[#101815] transition-colors duration-150">
-      {/* WhatsApp Web Left Sidebar */}
+      {/* 5-Item Navigation Left Sidebar */}
       <Sidebar
         schedules={schedules}
         selectedId={selectedId}
         onSelect={(id) => {
           setSelectedId(id);
-          setActiveView('chats');
+          setActiveView('activity');
         }}
         onOpenComposer={() => setIsComposerOpen(true)}
         activeView={activeView}
@@ -264,50 +280,82 @@ export const App: React.FC = () => {
         onToggleTheme={toggleTheme}
       />
 
-      {/* Main Right Screen Content */}
+      {/* Main Right Screen Content: Switched cleanly between the 5 requested views */}
       <main className="flex-1 h-full overflow-hidden flex flex-col">
-        {activeView === 'chats' && (
-          <ChatView
-            selectedMessage={selectedMessage}
+        {/* 1. Home Dashboard */}
+        {activeView === 'home' && (
+          <HomeView
+            status={status}
+            stats={stats}
+            schedules={schedules}
+            onNavigate={(view) => setActiveView(view)}
             onSendNow={handleSendNow}
-            onCancel={handleCancel}
-            onDelete={handleDelete}
-            onOpenComposer={() => setIsComposerOpen(true)}
+            sendingId={sendingId}
           />
         )}
 
-        {activeView === 'calendar' && (
+        {/* 2. Send Now (Instant Dispatch) */}
+        {activeView === 'send-now' && (
+          <SendNowView
+            contacts={contacts}
+            onMessageSent={() => {
+              refreshSchedules();
+              refreshStats();
+              setActiveView('activity');
+            }}
+          />
+        )}
+
+        {/* 3. Schedule for Later (Calendar Timeline) */}
+        {activeView === 'schedule' && (
           <CalendarView
             schedules={schedules}
             onSelect={(id) => {
               setSelectedId(id);
-              setActiveView('chats');
+              setActiveView('activity');
             }}
             onOpenComposer={() => setIsComposerOpen(true)}
           />
         )}
 
-        {activeView === 'vault' && (
-          <MediaVaultView
-            schedules={schedules}
-            onSelect={(id) => {
-              setSelectedId(id);
-              setActiveView('chats');
-            }}
-            onDelete={handleDelete}
-          />
+        {/* 4. Activity & Message Management */}
+        {activeView === 'activity' && (
+          <div className="flex-1 h-full flex flex-col md:flex-row overflow-hidden">
+            <ActivityView
+              schedules={schedules}
+              contacts={contacts}
+              onSelectMessage={(id) => setSelectedId(id)}
+              onSendNow={handleSendNow}
+              onRetry={handleRetry}
+              onDelete={handleDelete}
+              sendingId={sendingId}
+            />
+            {selectedMessage && (
+              <div className="hidden lg:flex w-[420px] h-full border-l border-[#DCE7E1] dark:border-[#2D3D35]">
+                <ChatView
+                  selectedMessage={selectedMessage}
+                  onSendNow={handleSendNow}
+                  onCancel={handleCancel}
+                  onDelete={handleDelete}
+                  onOpenComposer={() => setIsComposerOpen(true)}
+                />
+              </div>
+            )}
+          </div>
         )}
 
+        {/* 5. Settings & Preferences */}
         {activeView === 'settings' && (
           <SettingsView
             status={status}
             stats={stats}
             onLogout={handleLogout}
+            onTogglePause={handleTogglePause}
           />
         )}
       </main>
 
-      {/* New Schedule Composer Modal */}
+      {/* Schedule Composer Modal */}
       <ComposerModal
         isOpen={isComposerOpen}
         onClose={() => setIsComposerOpen(false)}
