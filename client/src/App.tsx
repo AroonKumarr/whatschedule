@@ -88,6 +88,27 @@ export const App: React.FC = () => {
     } catch (err) {}
   }, []);
 
+  // QR Screen Fast Polling — keeps status fresh even before WebSocket is active
+  // This is the ONLY path to detect connection when on the login page
+  useEffect(() => {
+    if (status.state === 'connected') return; // stop once connected
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const fresh = await api.getStatus();
+        if (!cancelled) setStatus(fresh);
+      } catch (_) {}
+    };
+
+    poll(); // immediate first check
+    const id = setInterval(poll, 1000); // poll every 1s while on QR screen
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [status.state]);
+
   // WebSocket Live Sync
   useEffect(() => {
     if (!authStatus.isUnlocked) return;

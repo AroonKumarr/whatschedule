@@ -130,7 +130,7 @@ class WhatsAppService {
       this.initialize().catch((err) => {
         console.error('[WhatsAppService] Post-adoption initialization error:', err?.message);
       });
-    }, 1000);
+    }, 200);
   }
 
   public async initialize(): Promise<void> {

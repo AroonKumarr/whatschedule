@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { addMinutes, addHours, setHours, setMinutes, addDays, format } from 'date-fns';
+import { VoiceSchedulerButton } from './VoiceSchedulerButton';
 
 interface ComposerModalProps {
   isOpen: boolean;
@@ -264,6 +265,43 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
               {error}
             </div>
           )}
+
+          {/* Voice to AI Scheduling Assistant Banner */}
+          <div className="p-3.5 bg-gradient-to-r from-[#E5F5EF] to-emerald-50/50 dark:from-[#1D3830] dark:to-[#172B24] border border-[#087F5B]/25 dark:border-[#25C993]/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#087F5B] dark:text-[#25C993]">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Voice to AI Fast Scheduler</span>
+              </div>
+              <p className="text-[11px] text-[#5D7168] dark:text-[#8A9A91] mt-0.5">
+                Say: &quot;Send message to Aroon tomorrow at 9pm message is let&apos;s play cricket&quot;
+              </p>
+            </div>
+            <VoiceSchedulerButton
+              contacts={contacts}
+              onParsed={(parsed) => {
+                if (parsed.recipientJid) {
+                  setSelectedContactJid(parsed.recipientJid);
+                  setContactMode('contacts');
+                } else if (parsed.phoneNumber) {
+                  setPhoneNumber(parsed.phoneNumber);
+                  setContactMode('direct');
+                }
+                if (parsed.recipientName) {
+                  setRecipientName(parsed.recipientName);
+                }
+                if (parsed.message) {
+                  setContent(parsed.message);
+                }
+                if (parsed.scheduledAt) {
+                  try {
+                    const d = new Date(parsed.scheduledAt);
+                    setScheduledAt(format(d, "yyyy-MM-dd'T'HH:mm"));
+                  } catch (_) {}
+                }
+              }}
+            />
+          </div>
 
           {/* 1. Multi-Platform Selector (Brand Spec) */}
           <div className="space-y-2">

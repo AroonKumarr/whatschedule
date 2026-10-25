@@ -315,4 +315,30 @@ export class ApiController {
       return res.status(500).json({ success: false, error: err.message });
     }
   }
+
+  /**
+   * POST /api/ai/parse-voice
+   * Parse a natural-language voice transcript into a structured schedule.
+   * Body: { transcript: string, timezone?: string }
+   * Returns: { recipientName, message, scheduledAt, provider }
+   */
+  public static async parseVoiceCommand(req: Request, res: Response) {
+    try {
+      const transcript = String(req.body.transcript || '').trim();
+      const timezone = String(req.body.timezone || 'UTC').trim();
+      const userId = (req as any).userId || 'anon';
+
+      if (!transcript) {
+        return res.status(400).json({ success: false, error: 'transcript is required' });
+      }
+      if (transcript.length > 500) {
+        return res.status(400).json({ success: false, error: 'transcript too long (max 500 chars)' });
+      }
+
+      const result = await aiService.parseVoiceCommand(userId, transcript, timezone);
+      return res.json({ success: true, data: result });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || 'Voice parse failed' });
+    }
+  }
 }

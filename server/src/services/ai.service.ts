@@ -247,6 +247,129 @@ class AIService {
     }
     return `Hi! Hope you are having a productive day. Reaching out regarding: ${req.prompt}. Looking forward to connecting!`;
   }
+
+  /**
+   * Parse a natural-language voice command into a structured schedule action.
+   * Examples:
+   *  "Send message to Aroon at 9pm, let's play cricket tomorrow"
+   *  "Remind Bilal tomorrow morning at 10 about the meeting"
+   *
+   * Returns: { recipientName, message, scheduledAt (ISO UTC), confidence }
+   */
+  public async parseVoiceCommand(
+    userId: string,
+    transcript: string,
+    userTimezone: string = 'UTC'
+  ): Promise<{
+    recipientName: string | null;
+    message: string | null;
+    scheduledAt: string | null;
+    rawParsed: string;
+    provider: string;
+  }> {
+    this.checkRateLimit(userId);
+
+    const now = new Date().toISOString();
+    const systemPrompt = `You are a smart WhatsApp message scheduler assistant.
+The user spoke a voice command. Extract the scheduling intent.
+Current UTC time: ${now}
+User's timezone: ${userTimezone}
+
+Extract and return ONLY valid JSON in this exact format (no markdown, no explanation):
+{
+  "recipientName": "<name of person to send to, or null>",
+  "message": "<the actual message content to send, or null>",
+  "scheduledAt": "<ISO 8601 UTC datetime string when to send, or null if no time mentioned>",
+  "confidence": <0.0-1.0>
+}
+
+Rules:
+- If user says "tomorrow at 9pm" resolve it relative to current UTC time + user timezone.
+- If no time is mentioned, scheduledAt = null (send immediately).
+- message should be ONLY the message content, not the scheduling instructions.
+- recipientName is the contact name the user wants to send to.`;
+
+    const groqKey = process.env.GROQ_API_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY;
+
+    let rawParsed = '';
+    let provider = 'local-fallback';
+
+    // Try Groq first (fastest)
+    if (groqKey) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 6000);
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey}` },
+          body: JSON.stringify({
+            model: 'qwen/qwen3.8-27b',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: `Voice command: "${transcript}"` },
+            ],
+            max_tokens: 200,
+            temperature: 0.1, // Low temp for structured JSON
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        const data: any = await response.json();
+        rawParsed = data.choices?.[0]?.message?.content?.trim() || '';
+        if (rawParsed) provider = 'groq';
+      } catch (err: any) {
+        console.warn('[Voice AI] Groq failed, trying Gemini:', err?.message);
+      }
+    }
+
+    // Fallback to Gemini
+    if (!rawParsed && geminiKey) {
+      try {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 7000);
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${systemPrompt}\n\nVoice command: "${transcript}"` }] }],
+            generationConfig: { maxOutputTokens: 200, temperature: 0.1 },
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        const data: any = await response.json();
+        rawParsed = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+        if (rawParsed) provider = 'gemini';
+      } catch (err: any) {
+        console.warn('[Voice AI] Gemini failed:', err?.message);
+      }
+    }
+
+    // Parse the JSON response
+    try {
+      // Strip markdown code fences if present
+      const cleaned = rawParsed.replace(/```json?\n?/gi, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+      return {
+        recipientName: parsed.recipientName || null,
+        message: parsed.message || null,
+        scheduledAt: parsed.scheduledAt || null,
+        rawParsed,
+        provider,
+      };
+    } catch (_) {
+      // Return best-effort nulls if JSON parse fails
+      return {
+        recipientName: null,
+        message: transcript, // fallback: use full transcript as message
+        scheduledAt: null,
+        rawParsed,
+        provider,
+      };
+    }
+  }
 }
 
 export const aiService = new AIService();

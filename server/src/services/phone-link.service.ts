@@ -290,15 +290,15 @@ export class PhoneLinkService {
 
         // 515 = DisconnectReason.restartRequired (WhatsApp companion pairing completed handshake!)
         if (statusCode === DisconnectReason.restartRequired || statusCode === 515) {
-          console.log(`[PhoneLink] Received 515 (restartRequired) — Pairing handshake completed on phone! Reconnecting...`);
+          console.log(`[PhoneLink] Received 515 (restartRequired) — Pairing handshake completed on phone! Reconnecting fast...`);
           session.isReconnecting = true;
 
-          // Reconnect with newly saved credentials to complete login
+          // Reconnect immediately with saved credentials — reduced from 1000ms to 150ms
           setTimeout(() => {
             this.startSocket(userId, session).catch((err) => {
               console.error(`[PhoneLink] Failed to reconnect after pairing:`, err);
             });
-          }, 1000);
+          }, 150);
           return;
         }
 
@@ -325,6 +325,7 @@ export class PhoneLinkService {
       // Handle Connection Open (SUCCESS!)
       if (connection === 'open') {
         console.log(`[PhoneLink] Connection OPEN! WhatsApp successfully linked for user "${userId}"!`);
+        // Mark session connected FIRST so polling returns 'connected' immediately
         session.status = 'connected';
         session.error = null;
         if (session.expiryTimer) {

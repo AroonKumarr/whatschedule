@@ -175,6 +175,30 @@ export const api = {
     return data.data.draft;
   },
 
+  async parseVoiceCommand(transcript: string, timezone?: string): Promise<{
+    recipientName: string | null;
+    message: string | null;
+    scheduledAt: string | null;
+    provider: string;
+  }> {
+    const res = await fetch(`${API_BASE}/ai/parse-voice`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getHeaders(),
+      },
+      body: JSON.stringify({
+        transcript,
+        timezone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to parse voice command');
+    }
+    return data.data;
+  },
+
   async getSchedules(status?: string): Promise<ScheduledMessage[]> {
     const url = status ? `${API_BASE}/schedules?status=${status}` : `${API_BASE}/schedules`;
     const res = await fetch(url, {
