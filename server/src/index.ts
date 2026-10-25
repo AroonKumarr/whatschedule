@@ -9,6 +9,7 @@ import { ApiController } from './controllers/api.controller';
 import { upload } from './services/media.service';
 import { whatsAppService } from './services/whatsapp.service';
 import { schedulerService } from './services/scheduler.service';
+import { authService } from './services/auth.service';
 
 dotenv.config();
 
@@ -19,20 +20,48 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded media
+// Auth middleware for security: Checks if master PIN is configured
+const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const isPinSet = await authService.isPinConfigured();
+  if (!isPinSet) {
+    // No PIN set yet, allow through to initial setup
+    return next();
+  }
+
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+
+  if (!authService.validateToken(token)) {
+    return res.status(401).json({
+      success: false,
+      error: 'Security Lock Active. Please enter Master PIN to unlock.',
+      locked: true,
+    });
+  }
+
+  next();
+};
+
+// Security & Master PIN Routes (Always accessible)
+app.get('/api/auth/status', ApiController.getAuthStatus);
+app.post('/api/auth/setup', ApiController.setupPin);
+app.post('/api/auth/unlock', ApiController.unlock);
+
+// Serve uploaded media (protected by file token or internal)
 const uploadsPath = path.resolve(__dirname, '../../uploads');
 app.use('/uploads', express.static(uploadsPath));
 
-// API Routes
+// API Routes (Protected by Master Security PIN)
 app.get('/api/status', ApiController.getStatus);
-app.post('/api/logout', ApiController.logout);
-app.get('/api/contacts', ApiController.getContacts);
-app.get('/api/schedules', ApiController.getSchedules);
-app.post('/api/schedules', upload.single('media'), ApiController.createSchedule);
-app.post('/api/schedules/:id/cancel', ApiController.cancelSchedule);
-app.post('/api/schedules/:id/retry', ApiController.retrySchedule);
-app.delete('/api/schedules/:id', ApiController.deleteSchedule);
-app.get('/api/stats', ApiController.getStats);
+app.post('/api/logout', requireAuth, ApiController.logout);
+app.get('/api/contacts', requireAuth, ApiController.getContacts);
+app.post('/api/contacts', requireAuth, ApiController.saveContact);
+app.get('/api/schedules', requireAuth, ApiController.getSchedules);
+app.post('/api/schedules', requireAuth, upload.single('media'), ApiController.createSchedule);
+app.post('/api/schedules/:id/cancel', requireAuth, ApiController.cancelSchedule);
+app.post('/api/schedules/:id/retry', requireAuth, ApiController.retrySchedule);
+app.delete('/api/schedules/:id', requireAuth, ApiController.deleteSchedule);
+app.get('/api/stats', requireAuth, ApiController.getStats);
 
 // Serve static frontend build if available (production mode)
 const clientDistPath = path.resolve(__dirname, '../../client/dist');

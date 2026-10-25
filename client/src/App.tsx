@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ScheduledMessage, Contact, WhatsAppStatus, QueueStats } from './types';
-import { api } from './services/api';
+import { api, AuthStatus } from './services/api';
+import { PinLockScreen } from './components/PinLockScreen';
 import { QRLoginPage } from './components/QRLoginPage';
 import { Sidebar } from './components/Sidebar';
 import { ChatView } from './components/ChatView';
@@ -10,6 +11,12 @@ import { SettingsView } from './components/SettingsView';
 import { ComposerModal } from './components/ComposerModal';
 
 export const App: React.FC = () => {
+  const [authStatus, setAuthStatus] = useState<AuthStatus>({
+    isPinSet: true, // Defaults to locked until checked
+    isUnlocked: false,
+  });
+  const [authChecked, setAuthChecked] = useState(false);
+
   const [status, setStatus] = useState<WhatsAppStatus>({
     state: 'connecting',
     qrCodeUrl: null,
@@ -24,6 +31,22 @@ export const App: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'chats' | 'calendar' | 'vault' | 'settings'>('chats');
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+
+  // Check Master PIN Security Status on Mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await api.getAuthStatus();
+        setAuthStatus(res);
+      } catch (e) {
+        // Fallback
+        setAuthStatus({ isPinSet: false, isUnlocked: true });
+      } finally {
+        setAuthChecked(true);
+      }
+    };
+    checkAuth();
+  }, []);
 
   // Load Data
   const refreshSchedules = useCallback(async () => {
@@ -54,6 +77,8 @@ export const App: React.FC = () => {
 
   // WebSocket Live Sync
   useEffect(() => {
+    if (!authStatus.isUnlocked) return;
+
     refreshSchedules();
     refreshStats();
     refreshContacts();
@@ -91,7 +116,6 @@ export const App: React.FC = () => {
 
     connectWs();
 
-    // Fallback polling every 8s for maximum reliability
     const interval = setInterval(() => {
       refreshSchedules();
       refreshStats();
@@ -102,9 +126,14 @@ export const App: React.FC = () => {
       clearTimeout(reconnectTimeout);
       clearInterval(interval);
     };
-  }, [refreshSchedules, refreshStats, refreshContacts]);
+  }, [authStatus.isUnlocked, refreshSchedules, refreshStats, refreshContacts]);
 
   // Actions
+  const handleLock = () => {
+    api.clearToken();
+    setAuthStatus((prev) => ({ ...prev, isUnlocked: false }));
+  };
+
   const handleSendNow = async (id: string) => {
     try {
       await api.retrySchedule(id);
@@ -150,7 +179,33 @@ export const App: React.FC = () => {
     await api.logout();
   };
 
-  // If WhatsApp is NOT connected yet, show the full authentic WhatsApp Web QR Login Screen!
+  if (!authChecked) {
+    return (
+      <div className="h-screen w-screen bg-[#0c1317] flex items-center justify-center text-[#8696a0] text-sm">
+        Initializing Security Environment...
+      </div>
+    );
+  }
+
+  // 1. Master PIN Security Lock (Protects from other Chrome profiles & unauthorized users)
+  if (!authStatus.isUnlocked) {
+    return (
+      <PinLockScreen
+        isPinSet={authStatus.isPinSet}
+        onSetup={async (pin) => {
+          return await api.setupPin(pin);
+        }}
+        onUnlock={async (pin) => {
+          return await api.unlock(pin);
+        }}
+        onSuccess={() => {
+          setAuthStatus({ isPinSet: true, isUnlocked: true });
+        }}
+      />
+    );
+  }
+
+  // 2. WhatsApp QR Login Screen (If session not linked)
   if (status.state !== 'connected') {
     return (
       <QRLoginPage
@@ -183,6 +238,7 @@ export const App: React.FC = () => {
         stats={stats}
         onRetry={handleRetry}
         onDelete={handleDelete}
+        onLock={handleLock}
       />
 
       {/* Main Right Screen Content */}

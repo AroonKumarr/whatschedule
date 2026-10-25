@@ -2,9 +2,85 @@ import { Request, Response } from 'express';
 import { whatsAppService } from '../services/whatsapp.service';
 import { schedulerService } from '../services/scheduler.service';
 import { detectMediaType } from '../services/media.service';
+import { authService } from '../services/auth.service';
 import { prisma } from '../database/prisma';
 
 export class ApiController {
+  // Security & Master PIN Endpoints
+  public static async getAuthStatus(req: Request, res: Response) {
+    try {
+      const isPinSet = await authService.isPinConfigured();
+      const authHeader = req.headers.authorization;
+      const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+      const isUnlocked = isPinSet ? authService.validateToken(token) : false;
+
+      return res.json({
+        success: true,
+        data: {
+          isPinSet,
+          isUnlocked: !isPinSet || isUnlocked, // If no PIN is configured yet, allows setup
+        },
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  public static async setupPin(req: Request, res: Response) {
+    try {
+      const { pin } = req.body;
+      if (!pin || pin.length < 4 || pin.length > 8) {
+        return res.status(400).json({ success: false, error: 'PIN must be between 4 and 8 digits' });
+      }
+
+      await authService.setPin(pin);
+      const auth = await authService.authenticate(pin);
+      return res.json({ success: true, token: auth.token });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  public static async unlock(req: Request, res: Response) {
+    try {
+      const { pin } = req.body;
+      if (!pin) {
+        return res.status(400).json({ success: false, error: 'PIN is required' });
+      }
+
+      const auth = await authService.authenticate(pin);
+      if (!auth.success) {
+        return res.status(401).json({ success: false, error: auth.error || 'Invalid PIN' });
+      }
+
+      return res.json({ success: true, token: auth.token });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // Contact Creation & Sync
+  public static async saveContact(req: Request, res: Response) {
+    try {
+      const { name, number } = req.body;
+      if (!number) {
+        return res.status(400).json({ success: false, error: 'Phone number is required' });
+      }
+      const rawNumber = number.replace(/[^0-9]/g, '');
+      const jid = whatsAppService.formatJid(number);
+
+      const contact = await prisma.contact.upsert({
+        where: { id: jid },
+        create: { id: jid, number: rawNumber, name: name || rawNumber },
+        update: { name: name || undefined },
+      });
+
+      return res.json({ success: true, data: contact });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
   public static async getStatus(req: Request, res: Response) {
     const status = whatsAppService.getStatus();
     return res.json({ success: true, data: status });

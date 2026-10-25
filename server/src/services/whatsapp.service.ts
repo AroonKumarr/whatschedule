@@ -224,6 +224,41 @@ class WhatsAppService {
         }
       });
 
+      // Sync contacts from initial messaging history (Phonebook & recent chats)
+      this.sock.ev.on('messaging-history.set', async ({ contacts, chats }) => {
+        console.log(`[WhatsApp] Syncing ${contacts.length} contacts & ${chats.length} chats from WhatsApp...`);
+
+        for (const contact of contacts) {
+          if (contact.id && !contact.id.includes('@g.us')) {
+            const rawNumber = contact.id.split('@')[0];
+            const name = contact.notify || contact.verifiedName || contact.name || rawNumber;
+            try {
+              await prisma.contact.upsert({
+                where: { id: contact.id },
+                create: { id: contact.id, number: rawNumber, name },
+                update: { name },
+              });
+            } catch (err) {}
+          }
+        }
+
+        for (const chat of chats) {
+          if (chat.id && !chat.id.includes('@g.us')) {
+            const rawNumber = chat.id.split('@')[0];
+            const name = chat.name || rawNumber;
+            try {
+              await prisma.contact.upsert({
+                where: { id: chat.id },
+                create: { id: chat.id, number: rawNumber, name },
+                update: { name: chat.name || undefined },
+              });
+            } catch (err) {}
+          }
+        }
+
+        this.notifyReceipts();
+      });
+
       // Sync and store contacts into SQLite automatically
       this.sock.ev.on('contacts.upsert', async (contacts) => {
         for (const contact of contacts) {

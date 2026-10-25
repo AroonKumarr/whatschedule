@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ScheduledMessage, WhatsAppStatus, QueueStats } from '../types';
+import { BrandLogo } from './BrandLogo';
 import {
   MessageSquarePlus,
   Calendar,
@@ -10,10 +11,12 @@ import {
   Image as ImageIcon,
   FileText,
   Clock,
+  Check,
   CheckCheck,
   AlertTriangle,
   RotateCcw,
   Trash2,
+  Lock,
 } from 'lucide-react';
 import { format, isToday, isTomorrow } from 'date-fns';
 
@@ -28,6 +31,7 @@ interface SidebarProps {
   stats: QueueStats;
   onRetry: (id: string) => void;
   onDelete: (id: string) => void;
+  onLock: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -41,6 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   stats,
   onRetry,
   onDelete,
+  onLock,
 }) => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'sent' | 'failed'>('all');
   const [search, setSearch] = useState('');
@@ -135,6 +140,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             title="Settings & Info"
           >
             <Settings className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={onLock}
+            className="p-2 text-[#aebac1] hover:text-[#ea4335] rounded-full transition-colors"
+            title="Lock WhatsSchedule (Master PIN)"
+          >
+            <Lock className="w-4 h-4" />
           </button>
 
           <button
