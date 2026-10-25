@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ScheduledMessage, Contact, WhatsAppStatus, QueueStats } from './types';
 import { api, AuthStatus } from './services/api';
+import { useTheme } from './hooks/useTheme';
 import { PinLockScreen } from './components/PinLockScreen';
 import { QRLoginPage } from './components/QRLoginPage';
 import { Sidebar } from './components/Sidebar';
@@ -11,6 +12,8 @@ import { SettingsView } from './components/SettingsView';
 import { ComposerModal } from './components/ComposerModal';
 
 export const App: React.FC = () => {
+  const { themeMode, toggleTheme } = useTheme();
+
   const [authStatus, setAuthStatus] = useState<AuthStatus>({
     isPinSet: true, // Defaults to locked until checked
     isUnlocked: false,
@@ -253,6 +256,8 @@ export const App: React.FC = () => {
         onDelete={handleDelete}
         onLock={handleLock}
         onTogglePause={handleTogglePause}
+        themeMode={themeMode}
+        onToggleTheme={toggleTheme}
       />
 
       {/* Main Right Screen Content */}

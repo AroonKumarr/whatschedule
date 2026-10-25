@@ -4,14 +4,20 @@
 
 @layer base {
   body {
-    @apply bg-[#0c1317] text-[#e9edef] font-sans antialiased;
+    @apply font-sans antialiased transition-colors duration-150 ease-out;
   }
 }
 
-/* WhatsApp Doodle Background Pattern */
-.wa-chat-bg {
+/* WhatsApp Doodle Backgrounds */
+.dark .wa-chat-bg {
   background-color: #0b141a;
   background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.wa-chat-bg {
+  background-color: #efeae2;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 0);
   background-size: 24px 24px;
 }
 
@@ -25,11 +31,16 @@
   background: transparent;
 }
 
-::-webkit-scrollbar-thumb {
+.dark ::-webkit-scrollbar-thumb {
   background: rgba(134, 150, 160, 0.25);
   border-radius: 3px;
 }
 
+::-webkit-scrollbar-thumb {
+  background: rgba(102, 119, 129, 0.3);
+  border-radius: 3px;
+}
+
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(134, 150, 160, 0.4);
+  background: rgba(134, 150, 160, 0.5);
 }
