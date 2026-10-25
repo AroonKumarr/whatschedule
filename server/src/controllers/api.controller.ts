@@ -83,6 +83,31 @@ export class ApiController {
     }
   }
 
+  // Request Baileys WhatsApp 8-Character Pairing Code for Phone Number Verification
+  public static async requestPairingCode(req: Request, res: Response) {
+    try {
+      const { phoneNumber, countryCode } = req.body;
+      if (!phoneNumber) {
+        return res.status(400).json({ success: false, error: 'Phone number is required' });
+      }
+
+      const rawCode = await whatsAppService.requestPairingCode(phoneNumber, countryCode || '92');
+      const formattedCode =
+        rawCode && rawCode.length === 8 ? `${rawCode.slice(0, 4)}-${rawCode.slice(4)}` : rawCode;
+
+      return res.json({
+        success: true,
+        data: {
+          code: rawCode,
+          formattedCode,
+        },
+      });
+    } catch (err: any) {
+      console.error('[API] Pairing code request error:', err);
+      return res.status(500).json({ success: false, error: err.message || 'Failed to request pairing code' });
+    }
+  }
+
   // Contact Creation & Sync
   public static async saveContact(req: Request, res: Response) {
     try {

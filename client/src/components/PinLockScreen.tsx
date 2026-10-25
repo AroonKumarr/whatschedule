@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BrandLogo } from './BrandLogo';
-import { Lock, ShieldCheck, ArrowRight, Delete, Moon, Sun } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
+import { Lock, ShieldCheck, ArrowRight, Delete } from 'lucide-react';
 
 interface PinLockScreenProps {
   isPinSet: boolean;
@@ -89,20 +90,10 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
       {/* Theme Toggle in top-right */}
       {onToggleTheme && (
         <div className="absolute top-6 right-6">
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            className="p-2 rounded-xl bg-white dark:bg-[#17211D] border border-[#DCE7E1] dark:border-[#2D3D35] text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#087F5B] dark:hover:text-[#25C993] transition-colors shadow-xs"
-            title="Toggle theme"
-            aria-label="Toggle theme"
-          >
-            <span className="dark:hidden">
-              <Moon className="w-4 h-4" />
-            </span>
-            <span className="hidden dark:inline">
-              <Sun className="w-4 h-4" />
-            </span>
-          </button>
+          <ThemeToggle
+            themeMode={themeMode}
+            onToggleTheme={onToggleTheme}
+          />
         </div>
       )}
 

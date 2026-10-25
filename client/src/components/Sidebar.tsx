@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ScheduledMessage, WhatsAppStatus, QueueStats } from '../types';
 import { ThemeMode } from '../hooks/useTheme';
+import { ThemeToggle } from './ThemeToggle';
 import {
   Home,
   Send,
@@ -20,8 +21,6 @@ import {
   Lock,
   Pause,
   Play,
-  Sun,
-  Moon,
   MessageSquarePlus,
 } from 'lucide-react';
 import { format, isToday, isTomorrow } from 'date-fns';
@@ -181,24 +180,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
 
         {/* Right Tools (Theme Toggle, Emergency Pause, Master PIN Lock) */}
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={onToggleTheme}
-            className="p-1.5 text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#087F5B] dark:hover:text-[#25C993] rounded-lg transition-transform active:scale-95"
-            title={`Toggle Theme (${themeMode.toUpperCase()})`}
-            aria-label="Toggle Theme"
-          >
-            <span className="dark:hidden">
-              <Moon className="w-4 h-4 text-[#5D7168]" />
-            </span>
-            <span className="hidden dark:inline">
-              <Sun className="w-4 h-4 text-[#F3C969]" />
-            </span>
-          </button>
+        <div className="flex items-center gap-1.5">
+          <ThemeToggle
+            themeMode={themeMode}
+            onToggleTheme={onToggleTheme}
+            className="p-1.5"
+          />
 
           <button
             onClick={onLock}
-            className="p-1.5 text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#B42318] rounded-lg transition-colors"
+            className="p-1.5 text-[#5D7168] dark:text-[#B2C1B8] hover:text-[#B42318] rounded-xl border border-transparent hover:border-[#B42318]/30 transition-colors"
             title="Lock WhatsSchedule (Master PIN)"
             aria-label="Lock WhatsSchedule"
           >

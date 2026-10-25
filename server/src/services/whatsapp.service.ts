@@ -10,6 +10,7 @@ import QRCode from 'qrcode';
 import path from 'path';
 import fs from 'fs';
 import { prisma } from '../database/prisma';
+import { normalizePhoneNumber } from '../utils/phone.util';
 
 export interface WhatsAppStatus {
   state: 'idle' | 'connecting' | 'qr_ready' | 'connected' | 'error';
@@ -475,6 +476,35 @@ class WhatsAppService {
     }
 
     return { keyId: result?.key?.id || undefined };
+  }
+
+  public async requestPairingCode(phoneNumber: string, countryCode: string = '92'): Promise<string> {
+    const cleaned = normalizePhoneNumber(phoneNumber, countryCode);
+
+    if (this.state === 'connected') {
+      throw new Error('WhatsApp is already connected. Please disconnect first if you wish to pair a new device.');
+    }
+
+    if (!this.sock) {
+      await this.initialize();
+      let attempts = 0;
+      while (!this.sock && attempts < 20) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        attempts++;
+      }
+    }
+
+    if (!this.sock) {
+      throw new Error('WhatsApp engine is initializing. Please try again in a few moments.');
+    }
+
+    try {
+      const code = await this.sock.requestPairingCode(cleaned);
+      return code;
+    } catch (err: any) {
+      console.error('[WhatsApp] Pairing code generation failed:', err);
+      throw new Error(err.message || 'Failed to request pairing code from WhatsApp. Please verify the phone number.');
+    }
   }
 
   public async logout(): Promise<void> {

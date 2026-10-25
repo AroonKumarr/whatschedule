@@ -43,8 +43,27 @@
 }
 
 @layer base {
+  *, *::before, *::after {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 220ms;
+  }
+
+  /* Never transition QR code or image canvas to prevent blurring */
+  img, canvas, .no-transition, .qr-container, .qr-container * {
+    transition: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+
   body {
-    @apply font-sans antialiased transition-colors duration-150 ease-out;
+    @apply font-sans antialiased;
     background-color: var(--color-page-bg);
     color: var(--color-text-primary);
   }

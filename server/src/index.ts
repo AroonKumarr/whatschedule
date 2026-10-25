@@ -46,6 +46,7 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
 app.get('/api/auth/status', ApiController.getAuthStatus);
 app.post('/api/auth/setup', ApiController.setupPin);
 app.post('/api/auth/unlock', ApiController.unlock);
+app.post('/api/auth/pairing-code', ApiController.requestPairingCode);
 
 // Serve uploaded media (protected by file token or internal)
 const uploadsPath = path.resolve(__dirname, '../../uploads');

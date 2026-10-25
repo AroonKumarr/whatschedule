@@ -73,6 +73,22 @@ export const api = {
     return data.data;
   },
 
+  async requestPairingCode(phoneNumber: string, countryCode?: string): Promise<{ code: string; formattedCode: string }> {
+    const res = await fetch(`${API_BASE}/auth/pairing-code`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getHeaders(),
+      },
+      body: JSON.stringify({ phoneNumber, countryCode }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to request pairing code');
+    }
+    return data.data;
+  },
+
   async logout(): Promise<void> {
     await fetch(`${API_BASE}/logout`, {
       method: 'POST',

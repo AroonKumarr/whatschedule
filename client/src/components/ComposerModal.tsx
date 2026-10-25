@@ -24,15 +24,15 @@ interface ComposerModalProps {
 }
 
 const COUNTRY_CODES = [
-  { code: '+91', country: 'India' },
+  { code: '+92', country: 'Pakistan' },
   { code: '+1', country: 'US / Canada' },
   { code: '+44', country: 'UK' },
   { code: '+971', country: 'UAE' },
+  { code: '+91', country: 'India' },
   { code: '+61', country: 'Australia' },
   { code: '+49', country: 'Germany' },
   { code: '+33', country: 'France' },
   { code: '+65', country: 'Singapore' },
-  { code: '+92', country: 'Pakistan' },
   { code: '+880', country: 'Bangladesh' },
   { code: '+966', country: 'Saudi Arabia' },
 ];
@@ -53,7 +53,7 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
     contacts.length > 0 ? contacts[0].id : ''
   );
 
-  const [countryCode, setCountryCode] = useState('+91');
+  const [countryCode, setCountryCode] = useState('+92');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [recipientName, setRecipientName] = useState('');
 
@@ -140,13 +140,20 @@ export const ComposerModal: React.FC<ComposerModalProps> = ({
     let finalName = recipientName;
 
     if (contactMode === 'direct') {
-      const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+      let cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
       if (!cleanNumber) {
         setError('Please enter a valid phone number');
         return;
       }
-      const codeDigits = countryCode.replace(/[^0-9]/g, '');
-      finalRecipient = `${codeDigits}${cleanNumber}`;
+      const codeDigits = countryCode.replace(/[^0-9]/g, '') || '92';
+      if (cleanNumber.startsWith('0')) {
+        cleanNumber = cleanNumber.replace(/^0+/, '');
+      }
+      if (!cleanNumber.startsWith(codeDigits)) {
+        finalRecipient = `${codeDigits}${cleanNumber}`;
+      } else {
+        finalRecipient = cleanNumber;
+      }
     } else {
       if (!selectedContactJid) {
         setError('Please select a contact from the list');

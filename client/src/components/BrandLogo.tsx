@@ -59,11 +59,12 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
           </filter>
         </defs>
 
-        {/* 1. Main Conversation Bubble in Forest Green with smooth tail */}
+        {/* 1. Main Conversation Bubble: Deep Forest Green in Light, White Outline in Dark */}
         <path
           d="M50 10C27.909 10 10 27.909 10 50C10 57.8 12.2 65.1 16 71.3L11 89L29.4 84.2C35.5 87.8 42.5 90 50 90C72.091 90 90 72.091 90 50C90 27.909 72.091 10 50 10Z"
           fill="url(#wsBubbleGrad)"
           filter="url(#wsSoftGlow)"
+          className="dark:fill-[#17211D] dark:stroke-[#FFFFFF] dark:stroke-[4.5px] transition-all duration-200"
         />
 
         {/* 2. Inner White Circular Clock Dial */}

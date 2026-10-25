@@ -15,9 +15,12 @@ import {
   Gift,
   Languages,
   Clock,
+  Calendar,
   CheckCircle2,
   AlertCircle,
+  Zap,
 } from 'lucide-react';
+import { addMinutes, addHours, addDays, format, setHours, setMinutes } from 'date-fns';
 
 interface SendNowViewProps {
   contacts: Contact[];
@@ -32,9 +35,16 @@ export const SendNowView: React.FC<SendNowViewProps> = ({ contacts, onMessageSen
   const [selectedContactJid, setSelectedContactJid] = useState(
     contacts.length > 0 ? contacts[0].id : ''
   );
-  const [countryCode, setCountryCode] = useState('+1');
+  const [countryCode, setCountryCode] = useState('+92');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [recipientName, setRecipientName] = useState('');
+
+  // Dispatch Mode: 'send_now' (Instant Send) vs 'schedule' (Scheduled for Future)
+  const [dispatchMode, setDispatchMode] = useState<'send_now' | 'schedule'>('send_now');
+  const [scheduledAtDate, setScheduledAtDate] = useState(() => {
+    // Default scheduled time: 1 hour in the future
+    return format(addHours(new Date(), 1), "yyyy-MM-dd'T'HH:mm");
+  });
 
   const [content, setContent] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -91,13 +101,23 @@ export const SendNowView: React.FC<SendNowViewProps> = ({ contacts, onMessageSen
     let finalName = recipientName;
 
     if (contactMode === 'direct') {
-      const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+      let cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
       if (!cleanNumber) {
         setStatusMessage({ type: 'error', text: 'Please enter a valid phone number.' });
         return;
       }
-      const codeDigits = countryCode.replace(/[^0-9]/g, '');
-      finalRecipient = `${codeDigits}${cleanNumber}`;
+      const cleanCc = countryCode.replace(/[^0-9]/g, '') || '92';
+
+      // Smart normalization for local numbers starting with 0 (e.g. 03310390837 -> 923310390837)
+      if (cleanNumber.startsWith('0')) {
+        cleanNumber = cleanNumber.replace(/^0+/, '');
+      }
+
+      if (!cleanNumber.startsWith(cleanCc)) {
+        finalRecipient = `${cleanCc}${cleanNumber}`;
+      } else {
+        finalRecipient = cleanNumber;
+      }
     } else {
       if (!selectedContactJid) {
         setStatusMessage({ type: 'error', text: 'Please select a contact.' });
@@ -121,8 +141,13 @@ export const SendNowView: React.FC<SendNowViewProps> = ({ contacts, onMessageSen
       formData.append('recipient', finalRecipient);
       if (finalName) formData.append('recipientName', finalName);
       formData.append('content', content);
-      // Scheduled for right now
-      formData.append('scheduledAt', new Date().toISOString());
+
+      const targetIso = dispatchMode === 'send_now'
+        ? new Date().toISOString()
+        : new Date(scheduledAtDate).toISOString();
+
+      formData.append('scheduledAt', targetIso);
+
       if (selectedFile) {
         formData.append('media', selectedFile);
       }
@@ -130,12 +155,20 @@ export const SendNowView: React.FC<SendNowViewProps> = ({ contacts, onMessageSen
       setSendingProgress(45);
       const created = await api.createSchedule(formData);
 
-      setSendingProgress(75);
-      // Trigger instant Send Now via atomic backend lock
-      await api.sendNow(created.id);
+      if (dispatchMode === 'send_now') {
+        setSendingProgress(75);
+        // Trigger instant Send Now via atomic backend lock
+        await api.sendNow(created.id);
+        setSendingProgress(100);
+        setStatusMessage({ type: 'success', text: `Message sent immediately to ${finalName || finalRecipient}!` });
+      } else {
+        setSendingProgress(100);
+        setStatusMessage({
+          type: 'success',
+          text: `Message successfully scheduled for ${format(new Date(scheduledAtDate), 'PPp')}!`,
+        });
+      }
 
-      setSendingProgress(100);
-      setStatusMessage({ type: 'success', text: `Message sent immediately to ${finalName || finalRecipient}!` });
       setContent('');
       setSelectedFile(null);
       onMessageSent();
@@ -367,6 +400,84 @@ export const SendNowView: React.FC<SendNowViewProps> = ({ contacts, onMessageSen
             </div>
           </div>
 
+          {/* Dispatch Timing Mode: Send Now vs. Schedule This */}
+          <div className="bg-[#F0F5F2] dark:bg-[#1E2B25] p-3 rounded-2xl border border-[#DCE7E1] dark:border-[#2D3D35] space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#16231F] dark:text-[#F2F7F4] flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-[#087F5B] dark:text-[#25C993]" />
+                <span>Delivery Timing</span>
+              </span>
+              <div className="flex p-0.5 bg-white dark:bg-[#17211D] rounded-xl border border-[#DCE7E1] dark:border-[#2D3D35]">
+                <button
+                  type="button"
+                  onClick={() => setDispatchMode('send_now')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                    dispatchMode === 'send_now'
+                      ? 'bg-[#087F5B] text-white dark:bg-[#25C993] dark:text-[#0D3027] shadow-2xs'
+                      : 'text-[#5D7168] dark:text-[#8A9A91] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
+                  }`}
+                >
+                  <Zap className="w-3 h-3" />
+                  <span>Send Now</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDispatchMode('schedule')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                    dispatchMode === 'schedule'
+                      ? 'bg-[#087F5B] text-white dark:bg-[#25C993] dark:text-[#0D3027] shadow-2xs'
+                      : 'text-[#5D7168] dark:text-[#8A9A91] hover:text-[#16231F] dark:hover:text-[#F2F7F4]'
+                  }`}
+                >
+                  <Calendar className="w-3 h-3" />
+                  <span>Schedule This</span>
+                </button>
+              </div>
+            </div>
+
+            {/* If Schedule This is chosen: display date/time picker and presets */}
+            {dispatchMode === 'schedule' && (
+              <div className="pt-2 border-t border-[#DCE7E1] dark:border-[#2D3D35] space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <input
+                    type="datetime-local"
+                    value={scheduledAtDate}
+                    onChange={(e) => setScheduledAtDate(e.target.value)}
+                    min={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
+                    className="flex-1 bg-white dark:bg-[#17211D] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-xl px-3 py-2 text-xs text-[#16231F] dark:text-[#F2F7F4] font-medium focus-visible:ring-2 focus-visible:ring-[#087F5B] dark:focus-visible:ring-[#25C993] focus-visible:outline-none"
+                    required
+                  />
+                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                    <button
+                      type="button"
+                      onClick={() => setScheduledAtDate(format(addMinutes(new Date(), 15), "yyyy-MM-dd'T'HH:mm"))}
+                      className="px-2.5 py-1.5 bg-white dark:bg-[#17211D] hover:bg-[#E5F5EF] dark:hover:bg-[#1D3830] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-lg text-[11px] font-semibold text-[#5D7168] dark:text-[#B2C1B8] whitespace-nowrap"
+                    >
+                      +15m
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setScheduledAtDate(format(addHours(new Date(), 1), "yyyy-MM-dd'T'HH:mm"))}
+                      className="px-2.5 py-1.5 bg-white dark:bg-[#17211D] hover:bg-[#E5F5EF] dark:hover:bg-[#1D3830] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-lg text-[11px] font-semibold text-[#5D7168] dark:text-[#B2C1B8] whitespace-nowrap"
+                    >
+                      +1h
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const tomorrow9 = setHours(setMinutes(addDays(new Date(), 1), 0), 9);
+                        setScheduledAtDate(format(tomorrow9, "yyyy-MM-dd'T'HH:mm"));
+                      }}
+                      className="px-2.5 py-1.5 bg-white dark:bg-[#17211D] hover:bg-[#E5F5EF] dark:hover:bg-[#1D3830] border border-[#DCE7E1] dark:border-[#2D3D35] rounded-lg text-[11px] font-semibold text-[#5D7168] dark:text-[#B2C1B8] whitespace-nowrap"
+                    >
+                      Tmrw 9am
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Loading Progress Bar */}
           {isSending && (
             <div className="space-y-1">
@@ -377,7 +488,9 @@ export const SendNowView: React.FC<SendNowViewProps> = ({ contacts, onMessageSen
                 />
               </div>
               <span className="text-[10px] text-[#788980] block text-center">
-                Acquiring recipient lock & sending through WhatsApp...
+                {dispatchMode === 'send_now'
+                  ? 'Acquiring recipient lock & sending through WhatsApp...'
+                  : 'Adding scheduled message to local SQLite queue...'}
               </span>
             </div>
           )}
@@ -388,8 +501,17 @@ export const SendNowView: React.FC<SendNowViewProps> = ({ contacts, onMessageSen
             disabled={isSending}
             className="w-full py-3.5 bg-[#087F5B] hover:bg-[#06684B] dark:bg-[#25C993] dark:hover:bg-[#46D9A6] disabled:opacity-50 text-white dark:text-[#0D3027] font-bold rounded-xl text-sm transition-transform active:scale-[0.99] shadow-xs flex items-center justify-center gap-2"
           >
-            <Send className="w-4 h-4" />
-            <span>{isSending ? 'Sending Now...' : 'Send WhatsApp Message Now'}</span>
+            {dispatchMode === 'send_now' ? (
+              <>
+                <Send className="w-4 h-4" />
+                <span>{isSending ? 'Sending Now...' : 'Send WhatsApp Message Now'}</span>
+              </>
+            ) : (
+              <>
+                <Calendar className="w-4 h-4" />
+                <span>{isSending ? 'Scheduling...' : 'Confirm Schedule for WhatsApp'}</span>
+              </>
+            )}
           </button>
         </form>
 
