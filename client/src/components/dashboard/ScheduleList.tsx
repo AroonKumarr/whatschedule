@@ -1,22 +1,20 @@
 import React, { useState } from 'react';
 import {
-  Menu,
-  Plus,
   Search,
+  Filter,
+  CheckCircle2,
   Clock,
-  CheckCheck,
-  AlertTriangle,
+  AlertCircle,
   FileText,
-  Image as ImageIcon,
-  Calendar,
-  Sparkles,
+  User,
+  Plus,
 } from 'lucide-react';
 
 export interface ScheduleListItem {
   id: string;
   name: string;
   number: string;
-  avatarColor: string;
+  avatarColor?: string;
   previewText: string;
   nextSendTime: string;
   status: 'pending' | 'processing' | 'sent' | 'failed';
@@ -28,7 +26,7 @@ interface ScheduleListProps {
   items: ScheduleListItem[];
   selectedId: string | null;
   onSelectSchedule: (id: string) => void;
-  onNewSchedule: () => void;
+  onNewSchedule?: () => void;
   className?: string;
 }
 
@@ -40,145 +38,143 @@ export const ScheduleList: React.FC<ScheduleListProps> = ({
   className = '',
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'sent' | 'failed'>('all');
 
-  const filteredItems = items.filter((item) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
+  const filtered = items.filter((item) => {
+    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+    const q = searchQuery.toLowerCase().trim();
+    const matchesQuery =
+      !q ||
       item.name.toLowerCase().includes(q) ||
-      item.previewText.toLowerCase().includes(q) ||
-      item.number.includes(q)
-    );
+      item.number.toLowerCase().includes(q) ||
+      item.previewText.toLowerCase().includes(q);
+    return matchesStatus && matchesQuery;
   });
 
   return (
-    <div
-      className={`w-full md:w-[305px] min-w-[305px] h-full flex flex-col bg-[#141414] border-r border-[#242424] relative overflow-hidden select-none ${className}`}
-    >
-      {/* 1. Translucent Sticky Header Strip & Pill Search (blur ~12px, bg rgba(15,15,15,0.7)) */}
-      <div className="sticky top-0 z-20 backdrop-blur-[12px] bg-[rgba(15,15,15,0.7)] px-3 pt-3 pb-2 border-b border-white/5 space-y-2">
-        {/* Top Header Row */}
+    <div className={`h-full flex flex-col bg-white dark:bg-[#0E1A26] border-r border-slate-200 dark:border-[#1E2D3D] text-slate-900 dark:text-slate-100 select-none ${className}`}>
+      
+      {/* Search Header Strip */}
+      <div className="p-3.5 border-b border-slate-100 dark:border-[#1E2D3D] space-y-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <h2 className="text-base font-extrabold tracking-tight">Messages</h2>
+          {onNewSchedule && (
             <button
               type="button"
-              className="p-1 rounded-lg text-[#A0A0A0] hover:text-white transition-colors"
-              title="Menu"
-              aria-label="Menu"
+              onClick={onNewSchedule}
+              className="p-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 transition-colors"
+              title="Compose message"
             >
-              <Menu className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
             </button>
-            <h1 className="text-base font-bold text-white tracking-tight">Scheduled</h1>
-          </div>
-
-          {/* Accent '+' New Schedule Button */}
-          <button
-            type="button"
-            onClick={onNewSchedule}
-            className="w-7 h-7 rounded-full bg-[#2DD4A7] hover:bg-[#25C993] text-[#0D3027] flex items-center justify-center shadow-xs transition-transform hover:scale-105 active:scale-95"
-            title="Create New Schedule"
-            aria-label="New Schedule"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-          </button>
+          )}
         </div>
 
-        {/* Pill Search */}
-        <div className="relative flex items-center bg-[#202020]/90 border border-white/10 rounded-full px-3 py-1.5 focus-within:border-[#2DD4A7]/60 transition-colors">
-          <Search className="w-3.5 h-3.5 text-[#A0A0A0] mr-2 shrink-0" />
+        {/* Search Input */}
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
           <input
             type="text"
+            placeholder="Search chats, posts or numbers..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search or start new chat"
-            className="w-full bg-transparent text-xs text-white placeholder-[#787878] focus:outline-none"
+            className="w-full bg-slate-50 dark:bg-[#142332] border border-slate-200 dark:border-slate-700/80 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500"
           />
+        </div>
+
+        {/* Quick Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5 text-[11px] font-bold">
+          {(['all', 'pending', 'sent', 'failed'] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setStatusFilter(tab)}
+              className={`px-3 py-1 rounded-full capitalize whitespace-nowrap transition-colors ${
+                statusFilter === tab
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-[#142332] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              {tab === 'pending' ? 'Queued' : tab}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* 2. Scrollable Rows Area (Scrolls Underneath Blurred Header) */}
-      <div
-        className="flex-1 overflow-y-auto px-1.5 py-1.5 space-y-1 thin-scrollbar"
-        role="listbox"
-        aria-label="Scheduled Messages List"
-      >
-        {filteredItems.length === 0 ? (
-          <div className="text-center py-10 px-4 text-[#787878] text-xs">
-            No scheduled conversations found.
+      {/* Rows List */}
+      <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/40">
+        {filtered.length === 0 ? (
+          <div className="p-8 text-center text-xs text-slate-400">
+            No messages found.
           </div>
         ) : (
-          filteredItems.map((item) => {
-            const isSelected = item.id === selectedId;
+          filtered.map((item) => {
+            const isSelected = selectedId === item.id;
+            const initials = item.name
+              ? item.name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase()
+              : 'WA';
 
             return (
               <div
                 key={item.id}
-                role="option"
-                aria-selected={isSelected}
-                tabIndex={0}
                 onClick={() => onSelectSchedule(item.id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    onSelectSchedule(item.id);
-                  }
-                }}
-                className={`group relative flex items-center gap-3 px-3 py-2.5 cursor-pointer select-none outline-none transition-all duration-120 active:scale-[0.99] ${
+                className={`p-3.5 flex items-start gap-3 cursor-pointer transition-all ${
                   isSelected
-                    ? 'bg-[#2A2A2A] rounded-[12px] shadow-sm'
-                    : 'rounded-[12px] hover:bg-[#1C1C1C]'
+                    ? 'bg-blue-50/70 dark:bg-blue-950/40 border-l-4 border-blue-600 dark:border-blue-500'
+                    : 'hover:bg-slate-50/80 dark:hover:bg-[#142332]/50'
                 }`}
-                style={{
-                  // Inset ~6px from the panel edges
-                  margin: '1px 3px',
-                }}
               >
-                {/* 40px Round Avatar */}
+                {/* Avatar */}
                 <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 shadow-2xs select-none"
-                  style={{ backgroundColor: item.avatarColor }}
+                  className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 text-white shadow-xs"
+                  style={{ backgroundColor: item.avatarColor || '#3B82F6' }}
                 >
-                  {item.name.charAt(0).toUpperCase()}
+                  {initials}
                 </div>
 
-                {/* Content Column */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[14px] font-semibold text-white truncate">
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
                       {item.name}
                     </span>
-                    <span className="text-[11px] text-[#A0A0A0] shrink-0 font-medium ml-2">
+                    <span className="text-[10px] text-slate-400 shrink-0 font-medium">
                       {item.nextSendTime}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-1 text-[12px] text-[#A0A0A0]">
-                    <div className="flex items-center gap-1 truncate">
-                      {item.hasMedia && (
-                        <ImageIcon className="w-3.5 h-3.5 text-[#2DD4A7] shrink-0" />
-                      )}
-                      <span className="truncate group-hover:text-[#D1D5DB] transition-colors">
-                        {item.previewText}
-                      </span>
-                    </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate leading-snug">
+                    {item.previewText}
+                  </p>
 
-                    {/* Status Badge / Unread Count */}
-                    <div className="shrink-0 flex items-center gap-1">
-                      {item.status === 'pending' && (
-                        <span title="Scheduled"><Clock className="w-3.5 h-3.5 text-[#F3C969]" /></span>
-                      )}
-                      {item.status === 'failed' && (
-                        <span title="Delivery failed"><AlertTriangle className="w-3.5 h-3.5 text-[#FF938B]" /></span>
-                      )}
-                      {item.status === 'sent' && (
-                        <span title="Sent"><CheckCheck className="w-3.5 h-3.5 text-[#2DD4A7]" /></span>
-                      )}
-                      {item.unreadCount !== undefined && item.unreadCount > 0 && (
-                        <span className="min-w-[18px] h-[18px] px-1 bg-[#2DD4A7] text-[#0D3027] font-bold text-[10px] rounded-full flex items-center justify-center">
-                          {item.unreadCount}
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    {item.status === 'sent' ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>Sent</span>
+                      </span>
+                    ) : item.status === 'failed' ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-500">
+                        <AlertCircle className="w-3 h-3" />
+                        <span>Failed</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+                        <Clock className="w-3 h-3" />
+                        <span>Scheduled</span>
+                      </span>
+                    )}
+
+                    {item.hasMedia && (
+                      <span className="inline-flex items-center gap-0.5 text-[10px] text-slate-400">
+                        <FileText className="w-2.5 h-2.5" />
+                        <span>Media</span>
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -186,6 +182,7 @@ export const ScheduleList: React.FC<ScheduleListProps> = ({
           })
         )}
       </div>
+
     </div>
   );
 };
