@@ -156,7 +156,8 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
   onToggleTheme,
   isSending = false,
 }) => {
-  const [activeNav, setActiveNav] = useState<NavItemKey>('home');
+  // Default to 'scheduled' (WhatsApp Messages View) after linking, as per WhatsApp-first design
+  const [activeNav, setActiveNav] = useState<NavItemKey>('scheduled');
   
   // Mobile single-column screen management (Screen 1: List vs. Screen 2: Conversation)
   const [mobileScreen, setMobileScreen] = useState<'list' | 'conversation'>('list');
