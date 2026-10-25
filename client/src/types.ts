@@ -1,0 +1,42 @@
+export interface ScheduledMessage {
+  id: string;
+  recipient: string;
+  recipientName?: string | null;
+  content?: string | null;
+  type: 'text' | 'image' | 'video' | 'document' | 'audio';
+  mediaPath?: string | null;
+  mediaMimeType?: string | null;
+  mediaFileName?: string | null;
+  scheduledAt: string;
+  status: 'pending' | 'processing' | 'sent' | 'failed' | 'cancelled';
+  error?: string | null;
+  sentAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Contact {
+  id: string;
+  name?: string | null;
+  number: string;
+  avatarUrl?: string | null;
+  lastContactedAt?: string | null;
+}
+
+export interface WhatsAppStatus {
+  state: 'idle' | 'connecting' | 'qr_ready' | 'connected' | 'error';
+  qrCodeUrl: string | null;
+  qrRaw: string | null;
+  user: {
+    id: string;
+    name?: string;
+  } | null;
+  lastConnectedAt: string | null;
+}
+
+export interface QueueStats {
+  total: number;
+  pending: number;
+  sent: number;
+  failed: number;
+}
