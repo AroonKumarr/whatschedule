@@ -1,0 +1,22 @@
+{
+  "name": "WhatsSchedule",
+  "short_name": "WhatsSchedule",
+  "description": "Open-Source WhatsApp Message & Media Automation by Aroon Kumar",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c1317",
+  "theme_color": "#00a884",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
