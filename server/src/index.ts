@@ -102,6 +102,15 @@ wss.on('connection', (ws: WebSocket) => {
   });
 });
 
+// Global Process Resilience Handlers (Prevents daemon crashes from Baileys socket timeouts)
+process.on('unhandledRejection', (reason: any) => {
+  console.warn('[Server] Intercepted unhandled rejection in background socket:', reason?.message || reason);
+});
+
+process.on('uncaughtException', (err: any) => {
+  console.error('[Server] Intercepted uncaught exception:', err?.message || err);
+});
+
 server.listen(PORT, async () => {
   console.log(`=======================================================`);
   console.log(`🚀 WhatsSchedule Engine running on http://localhost:${PORT}`);
