@@ -225,36 +225,65 @@ class WhatsAppService {
         }
       });
 
-      // Listen for Inbound Messages to Detect Opt-Out Keywords (STOP, UNSUBSCRIBE)
+      // Listen for Inbound & Outbound Messages to Sync Live Chat Thread & Opt-Outs
       this.sock.ev.on('messages.upsert', async ({ messages, type }) => {
         if (type !== 'notify') return;
 
         for (const msg of messages) {
-          if (!msg.message || msg.key.fromMe) continue;
+          if (!msg.message) continue;
 
-          const senderJid = msg.key.remoteJid;
-          if (!senderJid || senderJid.includes('@g.us')) continue; // Ignore groups for opt-out
+          const remoteJid = msg.key.remoteJid;
+          if (!remoteJid) continue;
 
+          const isFromMe = !!msg.key.fromMe;
           const text = (
             msg.message.conversation ||
             msg.message.extendedTextMessage?.text ||
+            msg.message.imageMessage?.caption ||
+            msg.message.videoMessage?.caption ||
             ''
-          ).trim().toUpperCase();
+          ).trim();
+
+          // 1. Record chat message in database for real-time conversation visibility
+          try {
+            await (prisma as any).chatMessage.upsert({
+              where: { waMessageId: msg.key.id || `local-${Date.now()}` },
+              create: {
+                waMessageId: msg.key.id,
+                jid: remoteJid,
+                sender: isFromMe ? 'outgoing' : 'incoming',
+                content: text || (msg.message.imageMessage ? '[Photo]' : msg.message.videoMessage ? '[Video]' : msg.message.documentMessage ? '[Document]' : '[Message]'),
+                timestamp: msg.messageTimestamp ? new Date(Number(msg.messageTimestamp) * 1000) : new Date(),
+                status: isFromMe ? 'sent' : 'received',
+              },
+              update: {
+                content: text || undefined,
+              },
+            });
+            this.notifyReceipts();
+          } catch (chatSaveErr) {
+            // Non-critical if schema migration pending
+          }
+
+          if (isFromMe) continue;
+          if (remoteJid.includes('@g.us')) continue; // Ignore groups for opt-out
+
+          const upperText = text.toUpperCase();
 
           // Check for standard compliance opt-out keywords
-          if (['STOP', 'UNSUBSCRIBE', 'CANCEL', 'OPTOUT', 'QUIT'].includes(text)) {
-            console.log(`[Compliance] Received opt-out keyword '${text}' from ${senderJid}`);
-            const rawNumber = senderJid.split('@')[0];
+          if (['STOP', 'UNSUBSCRIBE', 'CANCEL', 'OPTOUT', 'QUIT'].includes(upperText)) {
+            console.log(`[Compliance] Received opt-out keyword '${upperText}' from ${remoteJid}`);
+            const rawNumber = remoteJid.split('@')[0];
 
             try {
               await prisma.optOut.upsert({
                 where: { recipient: rawNumber },
                 create: {
                   recipient: rawNumber,
-                  reason: `Inbound keyword: ${text}`,
+                  reason: `Inbound keyword: ${upperText}`,
                 },
                 update: {
-                  reason: `Inbound keyword: ${text}`,
+                  reason: `Inbound keyword: ${upperText}`,
                 },
               });
 
@@ -461,6 +490,22 @@ class WhatsAppService {
     await this.applyHumanEmulation(jid, false);
 
     const result = await this.sock.sendMessage(jid, { text: content });
+
+    // Store outgoing sent message in chat message history
+    try {
+      await (prisma as any).chatMessage.create({
+        data: {
+          waMessageId: result?.key?.id,
+          jid,
+          sender: 'outgoing',
+          content,
+          timestamp: new Date(),
+          status: 'sent',
+        },
+      });
+      this.notifyReceipts();
+    } catch (_) {}
+
     return { keyId: result?.key?.id || undefined };
   }
 

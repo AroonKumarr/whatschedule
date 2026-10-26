@@ -180,6 +180,48 @@ export class ApiController {
     }
   }
 
+  // Get Live Chat Messages for a Contact
+  public static async getChatMessages(req: Request, res: Response) {
+    try {
+      const jid = String(req.params.jid || '');
+      if (!jid) {
+        return res.status(400).json({ success: false, error: 'Recipient jid is required' });
+      }
+
+      const rawNumber = jid.replace(/[^0-9]/g, '');
+
+      // 1. Fetch live sent/received chat history from chatMessage table
+      const chatHistory = await (prisma as any).chatMessage.findMany({
+        where: {
+          OR: [
+            { jid: { contains: rawNumber } },
+            { jid: jid },
+          ],
+        },
+        orderBy: { timestamp: 'asc' },
+        take: 100,
+      });
+
+      // 2. Also fetch scheduled dispatches for this recipient
+      const scheduled = await prisma.scheduledMessage.findMany({
+        where: {
+          recipient: { contains: rawNumber },
+        },
+        orderBy: { scheduledAt: 'asc' },
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          history: chatHistory,
+          scheduled,
+        },
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
   public static async getSchedules(req: Request, res: Response) {
     try {
       const statusFilter = req.query.status as string | undefined;

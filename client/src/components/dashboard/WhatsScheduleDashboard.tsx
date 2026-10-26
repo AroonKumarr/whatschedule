@@ -14,6 +14,7 @@ import { LandingPageView } from '../LandingPageView';
 import { OverviewHomeView } from './OverviewHomeView';
 import { CreatePostView } from './CreatePostView';
 import { TopSearchNavbar } from './TopSearchNavbar';
+import { ScheduledPostsView } from './ScheduledPostsView';
 import {
   Clock,
   Calendar as CalendarIcon,
@@ -156,8 +157,8 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
   onToggleTheme,
   isSending = false,
 }) => {
-  // Default to 'scheduled' (WhatsApp Messages View) after linking, as per WhatsApp-first design
-  const [activeNav, setActiveNav] = useState<NavItemKey>('scheduled');
+  // Default to 'messages' (WhatsApp Chats View) after linking, as per WhatsApp-first design
+  const [activeNav, setActiveNav] = useState<NavItemKey>('messages');
   
   // Mobile single-column screen management (Screen 1: List vs. Screen 2: Conversation)
   const [mobileScreen, setMobileScreen] = useState<'list' | 'conversation'>('list');
@@ -252,8 +253,8 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
       };
     }
 
-    // Check real schedules
-    const real = schedules.find((s) => s.id === activeId);
+    // Check real schedules (Match by ID or by recipient phone number)
+    const real = schedules.find((s) => s.id === activeId || s.recipient === activeId || (s.recipientName && s.recipientName.toLowerCase() === activeId.toLowerCase()));
     if (real) {
       const contact = contacts.find((c) => c.id === real.recipient);
       const name = real.recipientName || contact?.name || real.recipient.split('@')[0];
@@ -265,28 +266,28 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
         formattedTime = 'Scheduled';
       }
 
-      const msgs: ChatMessageItem[] = [
-        {
-          id: real.id,
-          sender: 'outgoing',
-          content: real.content,
-          timestamp: formattedTime,
-          status: real.status,
-          deliveryStatus: real.deliveryStatus,
-          scheduledAt: real.scheduledAt,
-          mediaUrl: real.mediaPath ? `/uploads/${real.mediaPath.split('/').pop()}` : null,
-          mediaType: real.type,
-          mediaName: real.mediaFileName,
-        },
-      ];
+      // Group all messages for this recipient so chat thread shows all dispatches
+      const relatedSchedules = schedules.filter((s) => s.recipient === real.recipient);
+      const msgs: ChatMessageItem[] = relatedSchedules.map((s) => ({
+        id: s.id,
+        sender: 'outgoing',
+        content: s.content || '',
+        timestamp: format(new Date(s.scheduledAt), 'MMM d, h:mm a'),
+        status: s.status,
+        deliveryStatus: s.deliveryStatus,
+        scheduledAt: s.scheduledAt,
+        mediaUrl: s.mediaPath ? `/uploads/${s.mediaPath.split('/').pop()}` : null,
+        mediaType: s.type,
+        mediaName: s.mediaFileName || undefined,
+      }));
 
       return {
         recipient: {
           id: real.recipient,
           name,
           number: real.recipient,
-          avatarColor: '#144D37',
-          subtitle: `scheduled for ${format(new Date(real.scheduledAt), 'PPp')}`,
+          avatarColor: '#10B981',
+          subtitle: `WhatsApp Contact • ${relatedSchedules.length} message(s)`,
         },
         messages: msgs,
       };
@@ -371,6 +372,16 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
               });
             }}
             onSuccessNavigate={() => setActiveNav('scheduled')}
+          />
+        </div>
+      ) : activeNav === 'scheduled' ? (
+        <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
+          <ScheduledPostsView
+            schedules={schedules}
+            onOpenCreatePost={onNewSchedule}
+            onSendNow={onSendNow}
+            onRetry={onRetry}
+            onDelete={onDelete}
           />
         </div>
       ) : activeNav === 'landing' ? (

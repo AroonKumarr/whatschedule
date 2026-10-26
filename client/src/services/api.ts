@@ -208,6 +208,14 @@ export const api = {
     return data.data || [];
   },
 
+  async getChatMessages(jid: string): Promise<{ history: any[]; scheduled: ScheduledMessage[] }> {
+    const res = await fetch(`${API_BASE}/chats/${encodeURIComponent(jid)}`, {
+      headers: this.getHeaders(),
+    });
+    const data = await res.json();
+    return data.data || { history: [], scheduled: [] };
+  },
+
   async createSchedule(formData: FormData): Promise<ScheduledMessage> {
     const token = this.getToken();
     const headers: Record<string, string> = {};

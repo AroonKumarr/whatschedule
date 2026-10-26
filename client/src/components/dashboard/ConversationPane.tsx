@@ -1,48 +1,38 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ScheduledMessage } from '../../types';
-import { SchedulingWallpaper } from '../wallpaper/SchedulingWallpaper';
-import { Composer } from './Composer';
-import { SchedulePopover, ScheduleOptions } from './SchedulePopover';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
   MoreVertical,
   Check,
   CheckCheck,
   Clock,
-  AlertTriangle,
-  ChevronDown,
-  ArrowLeft,
-  ExternalLink,
+  AlertCircle,
   FileText,
-  Calendar,
+  Image as ImageIcon,
+  ArrowLeft,
+  ChevronDown,
   Send,
-  RotateCcw,
-  Trash2,
+  Sparkles,
 } from 'lucide-react';
-import { format, isToday, isTomorrow } from 'date-fns';
+import { Composer } from './Composer';
+import { SchedulePopover, ScheduleOptions } from './SchedulePopover';
+import { SchedulingWallpaper } from '../wallpaper/SchedulingWallpaper';
+import { api } from '../../services/api';
 
 export interface ChatMessageItem {
   id: string;
   sender: 'incoming' | 'outgoing';
-  content?: string | null;
+  content: string;
   timestamp: string;
-  status?: 'pending' | 'processing' | 'sent' | 'failed' | 'cancelled';
-  deliveryStatus?: 'pending' | 'sent' | 'delivered' | 'read' | null;
+  status?: string;
+  deliveryStatus?: string;
   scheduledAt?: string;
   mediaUrl?: string | null;
-  mediaType?: 'text' | 'image' | 'video' | 'document' | 'audio' | null;
-  mediaName?: string | null;
-  linkPreview?: {
-    url: string;
-    title: string;
-    description: string;
-    domain: string;
-    image?: string;
-  };
+  mediaType?: string;
+  mediaName?: string;
 }
 
 interface ConversationPaneProps {
-  selectedRecipient?: {
+  selectedRecipient: {
     id: string;
     name: string;
     number: string;
@@ -51,8 +41,8 @@ interface ConversationPaneProps {
   } | null;
   messages: ChatMessageItem[];
   onBack?: () => void;
-  onSendMessage: (text: string, file: File | null) => void;
-  onScheduleMessage: (text: string, file: File | null, options: ScheduleOptions) => void;
+  onSendMessage: (content: string, file: File | null) => Promise<void>;
+  onScheduleMessage: (content: string, file: File | null, options: ScheduleOptions) => Promise<void>;
   onSendNow?: (id: string) => void;
   onRetry?: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -61,7 +51,7 @@ interface ConversationPaneProps {
 
 export const ConversationPane: React.FC<ConversationPaneProps> = ({
   selectedRecipient,
-  messages,
+  messages: propMessages,
   onBack,
   onSendMessage,
   onScheduleMessage,
@@ -70,332 +60,322 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
   onDelete,
   isSending = false,
 }) => {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [pendingText, setPendingText] = useState('');
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [popoverInitialText, setPopoverInitialText] = useState('');
+  const [popoverFile, setPopoverFile] = useState<File | null>(null);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [liveMessages, setLiveMessages] = useState<ChatMessageItem[]>(propMessages);
+  const [loadingChat, setLoadingChat] = useState(false);
 
-  // Auto-scroll to bottom on new message
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Sync and fetch full live conversation history for this recipient
+  useEffect(() => {
+    if (!selectedRecipient) {
+      setLiveMessages([]);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchChat = async () => {
+      try {
+        setLoadingChat(true);
+        const res = await api.getChatMessages(selectedRecipient.number || selectedRecipient.id);
+        if (!isMounted) return;
+
+        const combined: ChatMessageItem[] = [];
+
+        // 1. Inbound/Outbound chat history from database
+        if (res.history && res.history.length > 0) {
+          res.history.forEach((h: any) => {
+            combined.push({
+              id: h.id,
+              sender: h.sender === 'incoming' ? 'incoming' : 'outgoing',
+              content: h.content,
+              timestamp: new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              status: h.status,
+              deliveryStatus: h.status,
+              mediaUrl: h.mediaUrl,
+              mediaType: h.mediaType,
+              mediaName: h.mediaFileName,
+            });
+          });
+        }
+
+        // 2. Scheduled outgoing dispatches for this recipient
+        if (res.scheduled && res.scheduled.length > 0) {
+          res.scheduled.forEach((s: any) => {
+            combined.push({
+              id: s.id,
+              sender: 'outgoing',
+              content: s.content,
+              timestamp: `Scheduled: ${new Date(s.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+              status: s.status,
+              deliveryStatus: s.deliveryStatus,
+              scheduledAt: s.scheduledAt,
+              mediaUrl: s.mediaPath ? `/uploads/${s.mediaPath.split('/').pop()}` : null,
+              mediaType: s.type,
+              mediaName: s.mediaFileName,
+            });
+          });
+        }
+
+        // If DB has records for this contact, display them. Otherwise fallback to propMessages (seed or single schedule)
+        if (combined.length > 0) {
+          setLiveMessages(combined);
+        } else {
+          setLiveMessages(propMessages);
+        }
+      } catch (err) {
+        if (isMounted) setLiveMessages(propMessages);
+      } finally {
+        if (isMounted) setLoadingChat(false);
+      }
+    };
+
+    fetchChat();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedRecipient?.id, selectedRecipient?.number, propMessages]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages.length, selectedRecipient?.id]);
+  }, [liveMessages]);
 
-  const handleScroll = () => {
-    if (!scrollRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    const isFarUp = scrollHeight - scrollTop - clientHeight > 180;
-    setShowScrollBottom(isFarUp);
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setShowScrollBottom(distanceToBottom > 150);
   };
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }
   };
 
-  const handleOpenSchedulePopover = (text: string, file: File | null) => {
-    setPendingText(text);
-    setPendingFile(file);
+  const handleOpenSchedulePopover = (content: string, file: File | null) => {
+    setPopoverInitialText(content);
+    setPopoverFile(file);
     setIsPopoverOpen(true);
   };
 
-  const handleConfirmSchedule = (options: ScheduleOptions) => {
+  const handleConfirmSchedule = async (options: ScheduleOptions) => {
     setIsPopoverOpen(false);
-    onScheduleMessage(pendingText, pendingFile, options);
-    setPendingText('');
-    setPendingFile(null);
+    await onScheduleMessage(popoverInitialText, popoverFile, options);
   };
 
-  // If no recipient is selected: Empty State
   if (!selectedRecipient) {
     return (
-      <SchedulingWallpaper className="items-center justify-center text-center p-8">
-        <div className="max-w-md w-full bg-[#17211D]/90 backdrop-blur-md border border-[#2D3D35] rounded-3xl p-8 flex flex-col items-center shadow-xl">
-          <div className="w-16 h-16 rounded-2xl bg-[#1D3830] flex items-center justify-center text-[#2DD4A7] mb-4 shadow-xs">
-            <Calendar className="w-8 h-8" />
-          </div>
-          <h2 className="text-xl font-bold text-white tracking-tight">WhatsSchedule</h2>
-          <p className="text-xs text-[#A0A0A0] mt-2 leading-relaxed">
-            Select a scheduled contact or draft from the list to preview timeline bubbles, media attachments, and upcoming dispatch controls.
-          </p>
-          <div className="mt-5 text-[11px] font-mono text-[#2DD4A7] bg-[#101815] px-3 py-1.5 rounded-full border border-[#2D3D35]">
-            End-to-End Encrypted &bull; Dispatches Locally
-          </div>
+      <div className="flex-1 h-full flex flex-col items-center justify-center bg-slate-50 dark:bg-[#07111D] text-center p-8 select-none">
+        <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-blue-500 mb-4 shadow-xs">
+          <Clock className="w-8 h-8" />
         </div>
-      </SchedulingWallpaper>
+        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1">
+          Select a Conversation
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
+          Choose a chat from the left list to review real messages, send replies or schedule automatic dispatches.
+        </p>
+      </div>
     );
   }
 
+  const initials = selectedRecipient.name
+    ? selectedRecipient.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+    : 'WA';
+
   return (
-    <div className="relative w-full h-full flex flex-col overflow-hidden bg-[#0B0F0D]">
-      {/* 1. Header (height ~45px, sticky, translucent with backdrop blur) */}
-      <header
-        role="banner"
-        className="h-[45px] min-h-[45px] w-full px-3 sm:px-4 flex items-center justify-between sticky top-0 z-30 bg-[#0F0F0F]/70 backdrop-blur-md border-b border-[#242424]"
-      >
-        <div className="flex items-center gap-2.5 min-w-0">
-          {/* Mobile Back Button */}
+    <div className="flex-1 h-full flex flex-col bg-slate-100 dark:bg-[#07111D] text-slate-900 dark:text-slate-100 relative select-none">
+      
+      {/* 1. Header (Translucent + backdrop blur, 56px) */}
+      <header className="h-14 px-4 bg-white/90 dark:bg-[#0C1724]/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between z-30 shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
           {onBack && (
             <button
               type="button"
               onClick={onBack}
-              className="md:hidden p-1.5 -ml-1 text-[#A0A0A0] hover:text-white rounded-lg transition-colors"
-              aria-label="Back to schedule list"
+              className="md:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-900 dark:hover:text-white"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
 
-          {/* 28px Round Avatar */}
           <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 select-none"
-            style={{ backgroundColor: selectedRecipient.avatarColor || '#144D37' }}
+            className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-xs"
+            style={{ backgroundColor: selectedRecipient.avatarColor || '#3B82F6' }}
           >
-            {selectedRecipient.name.charAt(0).toUpperCase()}
+            {initials}
           </div>
 
-          {/* Name (14px semibold white) & Subtitle (12px gray #A0A0A0) */}
-          <div className="flex flex-col min-w-0 leading-tight">
-            <span className="text-[14px] font-semibold text-white truncate">
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white truncate">
               {selectedRecipient.name}
-            </span>
-            <span className="text-[12px] text-[#A0A0A0] truncate">
+            </h2>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
               {selectedRecipient.subtitle || selectedRecipient.number}
-            </span>
+            </p>
           </div>
         </div>
 
-        {/* Right: Small Pill-shaped button group (~50x22, radius 11px, bg rgba(255,255,255,0.08)) */}
-        <div className="flex items-center bg-white/[0.08] rounded-[11px] h-[22px] px-1.5 gap-1 shrink-0">
+        <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
           <button
             type="button"
-            className="p-0.5 text-[#A0A0A0] hover:text-white transition-colors"
-            title="Search inside conversation"
-            aria-label="Search conversation"
+            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            title="Search in chat"
           >
-            <Search className="w-3.5 h-3.5" />
+            <Search className="w-4 h-4" />
           </button>
-          <div className="w-[1px] h-2.5 bg-white/10" />
           <button
             type="button"
-            className="p-0.5 text-[#A0A0A0] hover:text-white transition-colors"
-            title="More conversation options"
-            aria-label="More options"
+            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            title="Options"
           >
-            <MoreVertical className="w-3.5 h-3.5" />
+            <MoreVertical className="w-4 h-4" />
           </button>
         </div>
       </header>
 
-      {/* 2. Wallpaper & Message Area */}
-      <SchedulingWallpaper className="flex-1 min-h-0 relative">
-        <div
-          ref={scrollRef}
-          onScroll={handleScroll}
-          className="w-full h-full overflow-y-auto px-3 sm:px-4 py-3 space-y-3 thin-scrollbar relative"
-        >
-          {/* Centered Date Pill ("Today") */}
-          <div className="flex justify-center sticky top-2 z-10 my-1 pointer-events-none">
-            <span className="bg-[rgba(30,30,30,0.9)] backdrop-blur-xs text-[12px] font-semibold text-white rounded-[8px] px-3 py-1 shadow-xs border border-white/5">
-              Today
-            </span>
-          </div>
+      {/* 2. Messages Wallpaper Area with Live Bubbles */}
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 relative z-10"
+      >
+        <SchedulingWallpaper>
+          <div className="max-w-3xl mx-auto space-y-3 pb-2">
+            
+            {/* Encryption & Security Notice */}
+            <div className="text-center my-3">
+              <span className="inline-block px-3 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/60 text-[10px] text-amber-800 dark:text-amber-200 font-medium">
+                🔒 Messages are end-to-end encrypted through your WhatsApp connection.
+              </span>
+            </div>
 
-          {/* Messages Feed */}
-          {messages.map((msg) => {
-            const isOutgoing = msg.sender === 'outgoing';
-
-            return (
-              <div
-                key={msg.id}
-                className={`flex flex-col ${isOutgoing ? 'items-end' : 'items-start'} group animate-in fade-in duration-150`}
-              >
-                {/* 1. Link Preview Card (if message contains a link) */}
-                {msg.linkPreview && (
-                  <a
-                    href={msg.linkPreview.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="max-w-[320px] sm:max-w-[360px] bg-white text-[#16231F] rounded-[12px] overflow-hidden shadow-lg border border-[#DCE7E1] mb-1 block hover:opacity-95 transition-opacity"
-                  >
-                    {msg.linkPreview.image && (
-                      <div className="h-28 w-full bg-[#E5F5EF] overflow-hidden">
-                        <img
-                          src={msg.linkPreview.image}
-                          alt={msg.linkPreview.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="p-3 relative">
-                      <div className="text-[15px] font-bold text-[#16231F] leading-snug line-clamp-2">
-                        {msg.linkPreview.title}
-                      </div>
-                      <div className="text-[13px] text-[#5D7168] mt-1 line-clamp-2 leading-relaxed">
-                        {msg.linkPreview.description}
-                      </div>
-                      <div className="text-[11px] font-mono text-[#788980] mt-2 flex items-center gap-1 uppercase">
-                        <ExternalLink className="w-3 h-3 text-[#087F5B]" />
-                        <span>{msg.linkPreview.domain}</span>
-                      </div>
-                      <div className="absolute bottom-0 inset-x-0 h-4 bg-gradient-to-t from-white to-transparent" />
-                    </div>
-                  </a>
-                )}
-
-                {/* 2. Media Image / Document Bubble */}
-                {msg.mediaUrl && (
-                  <div
-                    className={`max-w-[280px] sm:max-w-[340px] rounded-[12px] p-1 shadow-md mb-1 relative overflow-hidden ${
-                      isOutgoing ? 'bg-[#144D37] rounded-tr-[4px]' : 'bg-[#202020] rounded-tl-[4px]'
-                    }`}
-                  >
-                    {msg.mediaType === 'image' || msg.mediaUrl.match(/\.(jpeg|jpg|png|webp|gif)/i) ? (
-                      <div className="rounded-[10px] overflow-hidden bg-black/30">
-                        <img
-                          src={msg.mediaUrl}
-                          alt="Attached media"
-                          className="w-full max-h-60 object-cover rounded-[10px]"
-                        />
-                      </div>
-                    ) : (
-                      <div className="p-2.5 flex items-center gap-2.5 bg-black/20 rounded-[10px]">
-                        <FileText className="w-6 h-6 text-[#2DD4A7] shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <span className="text-xs font-semibold text-white truncate block">
-                            {msg.mediaName || 'Document Attachment'}
-                          </span>
-                          <span className="text-[10px] text-[#A0A0A0]">WhatsApp Document</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 3. Text Message Bubble */}
-                {msg.content && (
-                  <div
-                    className={`relative text-[14px] leading-[1.45] py-2 px-2.5 max-w-[65%] shadow-sm ${
-                      isOutgoing
-                        ? 'bg-[#144D37] text-[#E9EDEF] rounded-[12px] rounded-tr-[4px]'
-                        : 'bg-[#202020] text-[#E9EDEF] rounded-[12px] rounded-tl-[4px]'
-                    }`}
-                  >
-                    <div className="break-words select-text pr-14">
-                      {/* Detect URLs in text and format in accent green */}
-                      {msg.content.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
-                        part.match(/^https?:\/\//) ? (
-                          <a
-                            key={i}
-                            href={part}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[#2DD4A7] underline font-medium hover:opacity-80"
-                          >
-                            {part}
-                          </a>
-                        ) : (
-                          <span key={i}>{part}</span>
-                        )
-                      )}
-                    </div>
-
-                    {/* Timestamp & Status Icon bottom-right */}
-                    <div className="absolute bottom-1 right-2 flex items-center gap-1 select-none pointer-events-none">
-                      <span className="text-[11px] text-white/65">
-                        {msg.timestamp}
-                      </span>
-
-                      {/* Status indicator (single tick, double tick, or scheduling clock) */}
-                      {isOutgoing && (
-                        <span className="text-white/70">
-                          {msg.status === 'pending' ? (
-                            <span title="Scheduled"><Clock className="w-3.5 h-3.5 text-[#F3C969]" /></span>
-                          ) : msg.status === 'processing' ? (
-                            <span className="w-2 h-2 rounded-full bg-[#2DD4A7] animate-ping" />
-                          ) : msg.status === 'failed' ? (
-                            <span title="Delivery failed"><AlertTriangle className="w-3.5 h-3.5 text-[#FF938B]" /></span>
-                          ) : msg.deliveryStatus === 'read' ? (
-                            <span title="Read"><CheckCheck className="w-3.5 h-3.5 text-[#2DD4A7]" /></span>
-                          ) : msg.deliveryStatus === 'delivered' ? (
-                            <span title="Delivered"><CheckCheck className="w-3.5 h-3.5 text-white/80" /></span>
-                          ) : (
-                            <span title="Sent to server"><Check className="w-3.5 h-3.5 text-white/60" /></span>
-                          )}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Quick Action controls on hover for scheduled/failed messages */}
-                {isOutgoing && (msg.status === 'pending' || msg.status === 'failed') && (
-                  <div className="flex items-center gap-2 mt-1 opacity-80 group-hover:opacity-100 transition-opacity text-[11px]">
-                    {msg.status === 'pending' && onSendNow && (
-                      <button
-                        type="button"
-                        onClick={() => onSendNow(msg.id)}
-                        className="text-[#2DD4A7] hover:underline flex items-center gap-1 font-semibold"
-                      >
-                        <Send className="w-3 h-3" />
-                        <span>Send Now</span>
-                      </button>
-                    )}
-                    {msg.status === 'failed' && onRetry && (
-                      <button
-                        type="button"
-                        onClick={() => onRetry(msg.id)}
-                        className="text-[#FF938B] hover:underline flex items-center gap-1 font-semibold"
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                        <span>Retry</span>
-                      </button>
-                    )}
-                    {onDelete && (
-                      <button
-                        type="button"
-                        onClick={() => onDelete(msg.id)}
-                        className="text-[#8A9A91] hover:text-[#FF938B] flex items-center gap-0.5"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                )}
+            {liveMessages.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400">
+                No recorded messages yet. Send a message or schedule one below!
               </div>
-            );
-          })}
-        </div>
+            ) : (
+              liveMessages.map((msg) => {
+                const isOut = msg.sender === 'outgoing';
+                const isQueued = msg.status === 'pending';
+                const isFailed = msg.status === 'failed' || msg.status === 'cancelled';
 
-        {/* Floating Scroll-to-bottom Button (24px round, accent green, white chevron, ~8px above composer near left) */}
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col ${isOut ? 'items-end' : 'items-start'} animate-in fade-in`}
+                  >
+                    <div
+                      className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-2.5 text-xs shadow-xs relative ${
+                        isOut
+                          ? isQueued
+                            ? 'bg-blue-600 text-white rounded-tr-xs'
+                            : 'bg-emerald-600 dark:bg-[#005c4b] text-white rounded-tr-xs'
+                          : 'bg-white dark:bg-[#202c33] text-slate-900 dark:text-slate-100 rounded-tl-xs border border-slate-200/60 dark:border-slate-800/60'
+                      }`}
+                    >
+                      {/* Media Preview if attached */}
+                      {msg.mediaUrl && (
+                        <div className="mb-2 rounded-xl overflow-hidden bg-black/10">
+                          {msg.mediaType === 'image' ? (
+                            <img src={msg.mediaUrl} alt="Attached media" className="w-full max-h-60 object-cover" />
+                          ) : (
+                            <div className="p-3 flex items-center gap-2">
+                              <FileText className="w-5 h-5" />
+                              <span className="truncate font-semibold">{msg.mediaName || 'Document Attachment'}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Text Content */}
+                      <p className="whitespace-pre-wrap leading-relaxed select-text">
+                        {msg.content}
+                      </p>
+
+                      {/* Timestamp & Delivery Indicators */}
+                      <div
+                        className={`flex items-center justify-end gap-1.5 mt-1 text-[10px] ${
+                          isOut ? 'text-white/80' : 'text-slate-400'
+                        }`}
+                      >
+                        <span>{msg.timestamp}</span>
+
+                        {isOut && (
+                          <span>
+                            {isQueued ? (
+                              <Clock className="w-3 h-3 text-cyan-200 inline" />
+                            ) : isFailed ? (
+                              <AlertCircle className="w-3 h-3 text-rose-300 inline" />
+                            ) : msg.deliveryStatus === 'read' ? (
+                              <CheckCheck className="w-3.5 h-3.5 text-cyan-300 inline" />
+                            ) : msg.deliveryStatus === 'delivered' ? (
+                              <CheckCheck className="w-3.5 h-3.5 text-slate-300 inline" />
+                            ) : (
+                              <Check className="w-3 h-3 text-slate-300 inline" />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Inline Quick Action for Queued / Scheduled message */}
+                    {isQueued && onSendNow && (
+                      <div className="flex items-center gap-2 mt-1 mr-1">
+                        <button
+                          type="button"
+                          onClick={() => onSendNow(msg.id)}
+                          className="px-2.5 py-0.5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[10px] shadow-xs flex items-center gap-1 transition-transform active:scale-95 cursor-pointer"
+                        >
+                          <Send className="w-2.5 h-2.5" />
+                          <span>Send Now</span>
+                        </button>
+                        {onDelete && (
+                          <button
+                            type="button"
+                            onClick={() => onDelete(msg.id)}
+                            className="text-[10px] text-slate-400 hover:text-rose-500"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+
+          </div>
+        </SchedulingWallpaper>
+
         {showScrollBottom && (
           <button
             type="button"
             onClick={scrollToBottom}
-            className="absolute bottom-2 left-4 z-20 w-6 h-6 rounded-full bg-[#2DD4A7] hover:bg-[#25C993] text-[#0D3027] flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95 animate-in fade-in zoom-in-75 duration-150"
-            title="Scroll to latest messages"
-            aria-label="Scroll to bottom"
+            className="fixed bottom-20 right-8 p-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md text-slate-600 dark:text-slate-200 hover:scale-105 transition-all z-30"
           >
             <ChevronDown className="w-4 h-4" />
           </button>
         )}
-      </SchedulingWallpaper>
+      </div>
 
-      {/* 3. Composer (height ~56px pinned bottom, transparent over wallpaper) */}
-      <Composer
-        onSendMessage={onSendMessage}
-        onOpenSchedulePopover={handleOpenSchedulePopover}
-        isSending={isSending}
-        placeholder={`Message ${selectedRecipient.name}...`}
-      />
+      {/* 3. Composer Bar */}
+      <div className="p-3 bg-white/95 dark:bg-[#0C1724]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-30 shrink-0">
+        <Composer
+          onSendMessage={onSendMessage}
+          onOpenSchedulePopover={handleOpenSchedulePopover}
+          isSending={isSending}
+          placeholder={`Message ${selectedRecipient.name}...`}
+        />
+      </div>
 
-      {/* 4. Schedule Popover */}
+      {/* 4. Schedule Modal Popover */}
       <SchedulePopover
         isOpen={isPopoverOpen}
         onClose={() => setIsPopoverOpen(false)}

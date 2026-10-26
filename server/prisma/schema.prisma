@@ -48,6 +48,22 @@ model OptOut {
   createdAt  DateTime @default(now())
 }
 
+model ChatMessage {
+  id             String    @id @default(uuid())
+  jid            String    // Contact or Group remoteJid (e.g. 923422680520@s.whatsapp.net)
+  sender         String    // "incoming" | "outgoing"
+  content        String
+  timestamp      DateTime  @default(now())
+  status         String?   // sent, delivered, read, received
+  mediaUrl       String?
+  mediaType      String?
+  mediaFileName  String?
+  waMessageId    String?   @unique
+  createdAt      DateTime  @default(now())
+
+  @@index([jid, timestamp])
+}
+
 model AppConfig {
   key       String   @id
   value     String

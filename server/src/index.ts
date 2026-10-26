@@ -44,6 +44,7 @@ app.use('/uploads', express.static(uploadsPath));
 app.get('/api/status', ApiController.getStatus);
 app.post('/api/logout', requireAuth, ApiController.logout);
 app.get('/api/contacts', requireAuth, ApiController.getContacts);
+app.get('/api/chats/:jid', requireAuth, ApiController.getChatMessages);
 app.post('/api/contacts', requireAuth, ApiController.saveContact);
 app.post('/api/ai/draft', requireAuth, ApiController.generateAIDraft);
 app.post('/api/ai/parse-voice', requireAuth, ApiController.parseVoiceCommand);
