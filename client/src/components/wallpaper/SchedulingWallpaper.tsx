@@ -12,14 +12,11 @@ export const SchedulingWallpaper: React.FC<{ className?: string; children?: Reac
 }) => {
   return (
     <div
-      className={`relative w-full h-full overflow-hidden bg-[#0B0F0D] ${className}`}
-      style={{
-        backgroundColor: '#0B0F0D',
-      }}
+      className={`relative w-full min-h-full bg-[#EFEAE2] dark:bg-[#0B141A] transition-colors ${className}`}
     >
       {/* SVG Background Pattern */}
       <svg
-        className="absolute inset-0 w-full h-full pointer-events-none opacity-40 select-none"
+        className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.06] dark:opacity-[0.05] select-none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
       >
@@ -98,7 +95,7 @@ export const SchedulingWallpaper: React.FC<{ className?: string; children?: Reac
       </svg>
 
       {/* Content wrapper */}
-      <div className="relative z-10 w-full h-full flex flex-col">{children}</div>
+      <div className="relative z-10 w-full min-h-full flex flex-col">{children}</div>
     </div>
   );
 };

@@ -246,10 +246,11 @@ class WhatsAppService {
 
           // 1. Record chat message in database for real-time conversation visibility
           try {
+            const waId = msg.key.id || `local-${Date.now()}`;
             await (prisma as any).chatMessage.upsert({
-              where: { waMessageId: msg.key.id || `local-${Date.now()}` },
+              where: { waMessageId: waId },
               create: {
-                waMessageId: msg.key.id,
+                waMessageId: waId,
                 jid: remoteJid,
                 sender: isFromMe ? 'outgoing' : 'incoming',
                 content: text || (msg.message.imageMessage ? '[Photo]' : msg.message.videoMessage ? '[Video]' : msg.message.documentMessage ? '[Document]' : '[Message]'),
@@ -260,6 +261,26 @@ class WhatsAppService {
                 content: text || undefined,
               },
             });
+
+            // Auto-sync contact in phonebook with WhatsApp name
+            if (!remoteJid.includes('@g.us') && !remoteJid.includes('broadcast')) {
+              const cleanNumber = remoteJid.replace(/[^0-9]/g, '');
+              const pushName = msg.pushName || undefined;
+              await prisma.contact.upsert({
+                where: { id: remoteJid },
+                create: {
+                  id: remoteJid,
+                  number: cleanNumber,
+                  name: pushName || cleanNumber,
+                  lastContactedAt: new Date(),
+                },
+                update: {
+                  name: pushName || undefined,
+                  lastContactedAt: new Date(),
+                },
+              }).catch(() => {});
+            }
+
             this.notifyReceipts();
           } catch (chatSaveErr) {
             // Non-critical if schema migration pending
@@ -566,6 +587,24 @@ class WhatsAppService {
         caption: caption || undefined,
       });
     }
+
+    // Store outgoing media message in chat history
+    try {
+      await (prisma as any).chatMessage.create({
+        data: {
+          waMessageId: result?.key?.id,
+          jid,
+          sender: 'outgoing',
+          content: caption || (fileName ? `[${fileName}]` : '[Media Attachment]'),
+          timestamp: new Date(),
+          status: 'sent',
+          mediaUrl: filePath ? `/uploads/${path.basename(filePath)}` : null,
+          mediaType: mimeType.startsWith('image/') ? 'image' : mimeType.startsWith('video/') ? 'video' : 'document',
+          mediaFileName: fileName || path.basename(filePath),
+        },
+      });
+      this.notifyReceipts();
+    } catch (_) {}
 
     return { keyId: result?.key?.id || undefined };
   }

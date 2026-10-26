@@ -163,8 +163,10 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
   // Mobile single-column screen management (Screen 1: List vs. Screen 2: Conversation)
   const [mobileScreen, setMobileScreen] = useState<'list' | 'conversation'>('list');
 
-  // Format real schedules from DB into schedule list items
+  // Format real schedules from DB and contacts into schedule list items
   const liveListItems: ScheduleListItem[] = useMemo(() => {
+    const norm = (str?: string) => (str ? str.replace(/[^0-9]/g, '') : '');
+
     // 1. Group DB schedules by recipient JID
     const grouped = new Map<string, ScheduledMessage[]>();
     schedules.forEach((s) => {
@@ -174,10 +176,19 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
     });
 
     const realItems: ScheduleListItem[] = [];
+    const seenNumbers = new Set<string>();
+
     grouped.forEach((msgs, recipientJid) => {
       const latest = msgs[0];
-      const contact = contacts.find((c) => c.id === recipientJid);
-      const name = latest.recipientName || contact?.name || recipientJid.split('@')[0];
+      const rawNum = norm(recipientJid);
+      if (rawNum) seenNumbers.add(rawNum);
+
+      const contact = contacts.find((c) =>
+        c.id === recipientJid ||
+        c.number === recipientJid ||
+        (rawNum && (norm(c.id) === rawNum || norm(c.number) === rawNum))
+      );
+      const name = latest.recipientName || contact?.name || (rawNum || recipientJid.split('@')[0]);
 
       let formattedTime = 'Scheduled';
       try {
@@ -193,12 +204,30 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
         id: latest.id,
         name,
         number: recipientJid,
-        avatarColor: '#144D37',
+        avatarColor: '#10B981',
         previewText: latest.content || (latest.type !== 'text' ? `[${latest.type.toUpperCase()}]` : 'Scheduled message'),
         nextSendTime: formattedTime,
         status: latest.status === 'cancelled' ? 'failed' : latest.status,
         hasMedia: !!latest.mediaPath,
       });
+    });
+
+    // Also include any real contacts from the database that don't have schedules yet
+    contacts.forEach((c) => {
+      const rawNum = norm(c.number || c.id);
+      if (rawNum && !seenNumbers.has(rawNum)) {
+        seenNumbers.add(rawNum);
+        realItems.push({
+          id: c.id,
+          name: c.name || rawNum || 'WhatsApp Contact',
+          number: c.number || c.id,
+          avatarColor: '#059669',
+          previewText: 'Tap to view conversation',
+          nextSendTime: 'Contact',
+          status: 'sent',
+          hasMedia: false,
+        });
+      }
     });
 
     // 2. Combine with seed items so the UI is completely populated
@@ -236,9 +265,9 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
 
   // Determine currently selected conversation & messages
   const currentConversation = useMemo(() => {
-    const activeId = selectedId || (liveListItems.length > 0 ? liveListItems[0].id : 'seed-ayesha');
+    const activeId = selectedId || (displayedListItems.length > 0 ? displayedListItems[0].id : 'seed-ayesha');
 
-    // Check seed items first
+    // 1. Check seed items first
     const seed = SEED_RECIPIENTS.find((s) => s.id === activeId);
     if (seed) {
       return {
@@ -253,22 +282,37 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
       };
     }
 
-    // Check real schedules (Match by ID or by recipient phone number)
-    const real = schedules.find((s) => s.id === activeId || s.recipient === activeId || (s.recipientName && s.recipientName.toLowerCase() === activeId.toLowerCase()));
-    if (real) {
-      const contact = contacts.find((c) => c.id === real.recipient);
-      const name = real.recipientName || contact?.name || real.recipient.split('@')[0];
+    const norm = (str?: string) => (str ? str.replace(/[^0-9]/g, '') : '');
+    const cleanActive = norm(activeId);
 
-      let formattedTime = '';
-      try {
-        formattedTime = format(new Date(real.scheduledAt), 'h:mm a');
-      } catch {
-        formattedTime = 'Scheduled';
-      }
+    // 2. Match real contact
+    const contact = contacts.find(
+      (c) =>
+        c.id === activeId ||
+        c.number === activeId ||
+        (cleanActive && (norm(c.id) === cleanActive || norm(c.number) === cleanActive))
+    );
 
-      // Group all messages for this recipient so chat thread shows all dispatches
-      const relatedSchedules = schedules.filter((s) => s.recipient === real.recipient);
-      const msgs: ChatMessageItem[] = relatedSchedules.map((s) => ({
+    // 3. Match real schedules
+    const matchedSchedules = schedules.filter(
+      (s) =>
+        s.id === activeId ||
+        s.recipient === activeId ||
+        (cleanActive && norm(s.recipient) === cleanActive) ||
+        (contact && norm(s.recipient) === norm(contact.number))
+    );
+
+    const primarySchedule = matchedSchedules.find((s) => s.id === activeId) || matchedSchedules[0];
+
+    if (contact || primarySchedule) {
+      const recipientNumber = contact?.number || primarySchedule?.recipient || activeId;
+      const recipientName =
+        contact?.name ||
+        primarySchedule?.recipientName ||
+        (recipientNumber ? recipientNumber.split('@')[0] : 'Contact');
+
+      // Sort schedules chronologically
+      const msgs: ChatMessageItem[] = matchedSchedules.map((s) => ({
         id: s.id,
         sender: 'outgoing',
         content: s.content || '',
@@ -283,18 +327,18 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
 
       return {
         recipient: {
-          id: real.recipient,
-          name,
-          number: real.recipient,
+          id: contact?.id || primarySchedule?.recipient || activeId,
+          name: recipientName,
+          number: recipientNumber,
           avatarColor: '#10B981',
-          subtitle: `WhatsApp Contact • ${relatedSchedules.length} message(s)`,
+          subtitle: `WhatsApp • ${recipientNumber}`,
         },
         messages: msgs,
       };
     }
 
     return null;
-  }, [selectedId, schedules, contacts, liveListItems]);
+  }, [selectedId, schedules, contacts, displayedListItems]);
 
   const handleSelectRow = (id: string) => {
     onSelectSchedule(id);
@@ -599,13 +643,13 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
           </nav>
         </div>
       ) : (
-        <>
+        <div className="flex-1 h-full flex flex-row min-w-0 overflow-hidden">
           {/* ========================================================= */}
-          {/* ZONE 2: MIDDLE LIST (~305px desktop & tablet)             */}
+          {/* ZONE 2: MIDDLE LIST (~320px desktop & tablet)             */}
           {/* ========================================================= */}
           <div
-            className={`h-full ${
-              mobileScreen === 'conversation' ? 'hidden md:flex' : 'flex w-full md:w-[305px]'
+            className={`h-full shrink-0 ${
+              mobileScreen === 'conversation' ? 'hidden md:flex' : 'flex w-full md:w-[320px] lg:w-[360px]'
             }`}
           >
             <div className="flex-1 h-full flex flex-col min-w-0">
@@ -656,7 +700,7 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
           {/* ZONE 3: RIGHT CONVERSATION PANE                           */}
           {/* ========================================================= */}
           <div
-            className={`flex-1 h-full overflow-hidden ${
+            className={`flex-1 h-full min-w-0 overflow-hidden ${
               mobileScreen === 'list' ? 'hidden md:flex' : 'flex w-full'
             }`}
           >
@@ -672,7 +716,7 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
               isSending={isSending}
             />
           </div>
-        </>
+        </div>
       )}
 
         </div>

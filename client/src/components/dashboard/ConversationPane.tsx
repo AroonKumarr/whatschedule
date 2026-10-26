@@ -79,25 +79,30 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
     let isMounted = true;
     const fetchChat = async () => {
       try {
-        setLoadingChat(true);
         const res = await api.getChatMessages(selectedRecipient.number || selectedRecipient.id);
         if (!isMounted) return;
 
-        const combined: ChatMessageItem[] = [];
+        const combined: (ChatMessageItem & { rawTimestamp?: number })[] = [];
+        const seenMessageIds = new Set<string>();
 
         // 1. Inbound/Outbound chat history from database
         if (res.history && res.history.length > 0) {
           res.history.forEach((h: any) => {
+            const rawTs = h.timestamp ? new Date(h.timestamp).getTime() : Date.now();
+            if (h.waMessageId) seenMessageIds.add(h.waMessageId);
+            seenMessageIds.add(h.id);
+
             combined.push({
               id: h.id,
               sender: h.sender === 'incoming' ? 'incoming' : 'outgoing',
               content: h.content,
-              timestamp: new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              timestamp: new Date(rawTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               status: h.status,
               deliveryStatus: h.status,
               mediaUrl: h.mediaUrl,
               mediaType: h.mediaType,
               mediaName: h.mediaFileName,
+              rawTimestamp: rawTs,
             });
           });
         }
@@ -105,22 +110,32 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
         // 2. Scheduled outgoing dispatches for this recipient
         if (res.scheduled && res.scheduled.length > 0) {
           res.scheduled.forEach((s: any) => {
+            // Avoid duplicate if already in history
+            if (s.waMessageId && seenMessageIds.has(s.waMessageId)) return;
+            if (s.status === 'sent' && seenMessageIds.has(s.id)) return;
+
+            const rawTs = s.scheduledAt ? new Date(s.scheduledAt).getTime() : Date.now();
             combined.push({
               id: s.id,
               sender: 'outgoing',
               content: s.content,
-              timestamp: `Scheduled: ${new Date(s.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+              timestamp: s.status === 'pending'
+                ? `Scheduled: ${new Date(rawTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : new Date(rawTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               status: s.status,
               deliveryStatus: s.deliveryStatus,
               scheduledAt: s.scheduledAt,
               mediaUrl: s.mediaPath ? `/uploads/${s.mediaPath.split('/').pop()}` : null,
               mediaType: s.type,
               mediaName: s.mediaFileName,
+              rawTimestamp: rawTs,
             });
           });
         }
 
-        // If DB has records for this contact, display them. Otherwise fallback to propMessages (seed or single schedule)
+        // Sort chronologically (earliest to latest)
+        combined.sort((a, b) => (a.rawTimestamp || 0) - (b.rawTimestamp || 0));
+
         if (combined.length > 0) {
           setLiveMessages(combined);
         } else {
@@ -134,10 +149,15 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
     };
 
     fetchChat();
+
+    // Fast polling every 2.5s while conversation is open to stream replies & new messages
+    const pollInterval = setInterval(fetchChat, 2500);
+
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
     };
-  }, [selectedRecipient?.id, selectedRecipient?.number, propMessages]);
+  }, [selectedRecipient?.id, selectedRecipient?.number]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -243,10 +263,10 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 relative z-10"
+        className="flex-1 overflow-y-auto relative z-10 bg-[#EFEAE2] dark:bg-[#0B141A]"
       >
-        <SchedulingWallpaper>
-          <div className="max-w-3xl mx-auto space-y-3 pb-2">
+        <SchedulingWallpaper className="p-4 sm:p-6 min-h-full">
+          <div className="max-w-3xl mx-auto space-y-3 pb-2 w-full">
             
             {/* Encryption & Security Notice */}
             <div className="text-center my-3">
@@ -256,7 +276,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
             </div>
 
             {liveMessages.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-400">
+              <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-400">
                 No recorded messages yet. Send a message or schedule one below!
               </div>
             ) : (
@@ -275,8 +295,8 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
                         isOut
                           ? isQueued
                             ? 'bg-blue-600 text-white rounded-tr-xs'
-                            : 'bg-emerald-600 dark:bg-[#005c4b] text-white rounded-tr-xs'
-                          : 'bg-white dark:bg-[#202c33] text-slate-900 dark:text-slate-100 rounded-tl-xs border border-slate-200/60 dark:border-slate-800/60'
+                            : 'bg-[#D9FDD3] dark:bg-[#005c4b] text-[#111B21] dark:text-[#E9EDEF] rounded-tr-xs border border-[#C1EBC0]/70 dark:border-transparent'
+                          : 'bg-white dark:bg-[#202c33] text-[#111B21] dark:text-[#E9EDEF] rounded-tl-xs border border-slate-200/70 dark:border-transparent shadow-xs'
                       }`}
                     >
                       {/* Media Preview if attached */}
@@ -286,7 +306,7 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
                             <img src={msg.mediaUrl} alt="Attached media" className="w-full max-h-60 object-cover" />
                           ) : (
                             <div className="p-3 flex items-center gap-2">
-                              <FileText className="w-5 h-5" />
+                              <FileText className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                               <span className="truncate font-semibold">{msg.mediaName || 'Document Attachment'}</span>
                             </div>
                           )}
@@ -294,14 +314,18 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
                       )}
 
                       {/* Text Content */}
-                      <p className="whitespace-pre-wrap leading-relaxed select-text">
+                      <p className="whitespace-pre-wrap leading-relaxed select-text font-normal">
                         {msg.content}
                       </p>
 
                       {/* Timestamp & Delivery Indicators */}
                       <div
                         className={`flex items-center justify-end gap-1.5 mt-1 text-[10px] ${
-                          isOut ? 'text-white/80' : 'text-slate-400'
+                          isOut
+                            ? isQueued
+                              ? 'text-white/80'
+                              : 'text-emerald-950/60 dark:text-emerald-100/70'
+                            : 'text-slate-500 dark:text-[#8696a0]'
                         }`}
                       >
                         <span>{msg.timestamp}</span>
@@ -311,13 +335,13 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
                             {isQueued ? (
                               <Clock className="w-3 h-3 text-cyan-200 inline" />
                             ) : isFailed ? (
-                              <AlertCircle className="w-3 h-3 text-rose-300 inline" />
+                              <AlertCircle className="w-3 h-3 text-rose-500 inline" />
                             ) : msg.deliveryStatus === 'read' ? (
-                              <CheckCheck className="w-3.5 h-3.5 text-cyan-300 inline" />
+                              <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb] inline" />
                             ) : msg.deliveryStatus === 'delivered' ? (
-                              <CheckCheck className="w-3.5 h-3.5 text-slate-300 inline" />
+                              <CheckCheck className="w-3.5 h-3.5 text-slate-500 dark:text-slate-300 inline" />
                             ) : (
-                              <Check className="w-3 h-3 text-slate-300 inline" />
+                              <Check className="w-3 h-3 text-slate-500 dark:text-slate-300 inline" />
                             )}
                           </span>
                         )}
