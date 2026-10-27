@@ -14,6 +14,7 @@ export interface ScheduleOptions {
   scheduledAt: string;
   timezone: string;
   repeat: 'none' | 'daily' | 'weekly' | 'custom';
+  content?: string;
 }
 
 interface SchedulePopoverProps {
@@ -21,6 +22,8 @@ interface SchedulePopoverProps {
   onClose: () => void;
   onConfirm: (options: ScheduleOptions) => void;
   initialDateTime?: string;
+  initialContent?: string;
+  file?: File | null;
 }
 
 export const SchedulePopover: React.FC<SchedulePopoverProps> = ({
@@ -28,13 +31,19 @@ export const SchedulePopover: React.FC<SchedulePopoverProps> = ({
   onClose,
   onConfirm,
   initialDateTime,
+  initialContent = '',
+  file = null,
 }) => {
   if (!isOpen) return null;
 
+  // Default to 2 minutes from now so quick testing dispatches quickly
   const [dateTime, setDateTime] = useState<string>(() => {
     if (initialDateTime) return initialDateTime;
-    return format(addHours(new Date(), 1), "yyyy-MM-dd'T'HH:mm");
+    return format(addMinutes(new Date(), 2), "yyyy-MM-dd'T'HH:mm");
   });
+
+  const [messageText, setMessageText] = useState<string>(initialContent);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [timezone, setTimezone] = useState<string>(() => {
     try {
@@ -55,12 +64,32 @@ export const SchedulePopover: React.FC<SchedulePopoverProps> = ({
     setDateTime(format(tmrw, "yyyy-MM-dd'T'HH:mm"));
   };
 
+  // Format live human-friendly dispatch timestamp with AM/PM
+  let formattedPreview = '';
+  let relativeMinutes = 0;
+  try {
+    const targetDate = new Date(dateTime);
+    formattedPreview = format(targetDate, "EEEE, MMM d 'at' h:mm a");
+    relativeMinutes = Math.round((targetDate.getTime() - Date.now()) / 60000);
+  } catch {
+    formattedPreview = dateTime;
+  }
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+
+    const trimmed = messageText.trim();
+    if (!trimmed && !file) {
+      setErrorMessage('Please type a message before scheduling.');
+      return;
+    }
+
     onConfirm({
       scheduledAt: new Date(dateTime).toISOString(),
       timezone,
       repeat,
+      content: trimmed,
     });
   };
 
@@ -85,7 +114,7 @@ export const SchedulePopover: React.FC<SchedulePopoverProps> = ({
               <h3 id="schedule-popover-title" className="text-sm font-bold text-white tracking-tight">
                 Schedule Message
               </h3>
-              <p className="text-[11px] text-[#A0A0A0]">Choose exact dispatch time & recurrence</p>
+              <p className="text-[11px] text-[#A0A0A0]">Pick dispatch time with automatic countdown</p>
             </div>
           </div>
           <button
@@ -98,22 +127,38 @@ export const SchedulePopover: React.FC<SchedulePopoverProps> = ({
           </button>
         </div>
 
+        {/* Live Human-Readable Time Preview Banner */}
+        <div className="p-2.5 rounded-xl bg-[#101815] border border-[#25C993]/30 text-xs flex items-start gap-2">
+          <Zap className="w-4 h-4 text-[#2DD4A7] shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold text-white">
+              {formattedPreview}
+            </div>
+            <div className="text-[11px] text-[#2DD4A7] font-medium">
+              {relativeMinutes <= 0
+                ? 'Will dispatch immediately'
+                : `Will dispatch in ${relativeMinutes} minute${relativeMinutes === 1 ? '' : 's'}`}
+            </div>
+          </div>
+        </div>
+
         {/* Quick Presets */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          <button
-            type="button"
-            onClick={() => handleQuickPreset(15)}
-            className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#1E2B25] hover:bg-[#254A40] text-[#2DD4A7] border border-[#2D3D35] transition-colors whitespace-nowrap"
-          >
-            +15m
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickPreset(60)}
-            className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#1E2B25] hover:bg-[#254A40] text-[#2DD4A7] border border-[#2D3D35] transition-colors whitespace-nowrap"
-          >
-            +1 hour
-          </button>
+          {[
+            { label: '+2m', mins: 2 },
+            { label: '+5m', mins: 5 },
+            { label: '+15m', mins: 15 },
+            { label: '+1h', mins: 60 },
+          ].map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => handleQuickPreset(preset.mins)}
+              className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#1E2B25] hover:bg-[#254A40] text-[#2DD4A7] border border-[#2D3D35] transition-colors whitespace-nowrap"
+            >
+              {preset.label}
+            </button>
+          ))}
           <button
             type="button"
             onClick={handleTomorrow9am}
@@ -123,10 +168,24 @@ export const SchedulePopover: React.FC<SchedulePopoverProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleFormSubmit} className="space-y-3.5">
+        <form onSubmit={handleFormSubmit} className="space-y-3">
+          {/* Message Content Preview/Edit */}
+          <div>
+            <label className="block text-[11px] font-semibold text-[#A0A0A0] uppercase tracking-wider mb-1">
+              Message Content
+            </label>
+            <textarea
+              rows={2}
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              placeholder="Type your WhatsApp message..."
+              className="w-full bg-[#101815] border border-[#2D3D35] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#2DD4A7] resize-none"
+            />
+          </div>
+
           {/* Date & Time Picker */}
           <div>
-            <label className="block text-[11px] font-semibold text-[#A0A0A0] uppercase tracking-wider mb-1.5">
+            <label className="block text-[11px] font-semibold text-[#A0A0A0] uppercase tracking-wider mb-1">
               Dispatch Date & Time
             </label>
             <input
@@ -141,7 +200,7 @@ export const SchedulePopover: React.FC<SchedulePopoverProps> = ({
 
           {/* Timezone */}
           <div>
-            <label className="block text-[11px] font-semibold text-[#A0A0A0] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+            <label className="block text-[11px] font-semibold text-[#A0A0A0] uppercase tracking-wider mb-1 flex items-center gap-1">
               <Globe className="w-3 h-3 text-[#2DD4A7]" />
               <span>Timezone</span>
             </label>
@@ -159,35 +218,10 @@ export const SchedulePopover: React.FC<SchedulePopoverProps> = ({
             </select>
           </div>
 
-          {/* Repeat Recurrence */}
-          <div>
-            <label className="block text-[11px] font-semibold text-[#A0A0A0] uppercase tracking-wider mb-1.5 flex items-center gap-1">
-              <Repeat className="w-3 h-3 text-[#2DD4A7]" />
-              <span>Repeat Cadence</span>
-            </label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {[
-                { id: 'none', label: 'Does not repeat' },
-                { id: 'daily', label: 'Daily' },
-                { id: 'weekly', label: 'Weekly' },
-                { id: 'custom', label: 'Custom' },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setRepeat(item.id as any)}
-                  className={`py-1.5 px-2.5 rounded-xl text-xs font-medium border text-left flex items-center justify-between transition-colors ${
-                    repeat === item.id
-                      ? 'bg-[#1D3830] text-[#2DD4A7] border-[#2DD4A7]/40'
-                      : 'bg-[#101815] text-[#A0A0A0] border-[#2D3D35] hover:text-white'
-                  }`}
-                >
-                  <span>{item.label}</span>
-                  {repeat === item.id && <Check className="w-3 h-3 text-[#2DD4A7]" />}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Error notice if validation fails */}
+          {errorMessage && (
+            <p className="text-xs text-rose-400 font-semibold">{errorMessage}</p>
+          )}
 
           {/* Action Buttons */}
           <div className="pt-2 flex items-center gap-2">

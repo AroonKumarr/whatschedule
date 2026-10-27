@@ -118,10 +118,10 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
             combined.push({
               id: s.id,
               sender: 'outgoing',
-              content: s.content,
+              content: s.content || (s.status === 'pending' ? '(Scheduled Message)' : ''),
               timestamp: s.status === 'pending'
-                ? `Scheduled: ${new Date(rawTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                : new Date(rawTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                ? `Scheduled: ${new Date(rawTs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}`
+                : new Date(rawTs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }),
               status: s.status,
               deliveryStatus: s.deliveryStatus,
               scheduledAt: s.scheduledAt,
@@ -185,7 +185,8 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
 
   const handleConfirmSchedule = async (options: ScheduleOptions) => {
     setIsPopoverOpen(false);
-    await onScheduleMessage(popoverInitialText, popoverFile, options);
+    const finalContent = options.content !== undefined ? options.content : popoverInitialText;
+    await onScheduleMessage(finalContent, popoverFile, options);
   };
 
   if (!selectedRecipient) {
@@ -404,6 +405,8 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
         isOpen={isPopoverOpen}
         onClose={() => setIsPopoverOpen(false)}
         onConfirm={handleConfirmSchedule}
+        initialContent={popoverInitialText}
+        file={popoverFile}
       />
     </div>
   );

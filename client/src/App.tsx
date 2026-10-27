@@ -269,6 +269,11 @@ export const App: React.FC = () => {
     file: File | null,
     options?: ScheduleOptions
   ) => {
+    if (!content.trim() && !file) {
+      alert('Please enter a message before scheduling or sending.');
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append('recipient', recipientJid);
