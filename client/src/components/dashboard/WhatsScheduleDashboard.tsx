@@ -198,6 +198,7 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
           status: conv.hasScheduled ? 'pending' : (conv.status === 'failed' ? 'failed' : 'sent'),
           unreadCount: conv.unreadCount || 0,
           hasMedia: conv.hasMedia,
+          isGroup: !!(conv.isGroup || (conv.id && conv.id.includes('@g.us')) || (conv.jid && conv.jid.includes('@g.us'))),
         };
       });
     }
@@ -287,11 +288,11 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
   // Filter items based on activeNav selection
   const displayedListItems = useMemo(() => {
     if (activeNav === 'messages') {
-      // 1-on-1 direct conversations & scheduled messages
-      return liveListItems.filter((i) => !i.number.includes('@g.us'));
+      // 1-on-1 direct conversations & scheduled messages (excluding group chats)
+      return liveListItems.filter((i) => !i.isGroup && !i.id.includes('@g.us') && !i.number.includes('@g.us'));
     }
     if (activeNav === 'groups') {
-      return liveListItems.filter((i) => i.number.includes('@g.us') || i.number.includes('broadcast'));
+      return liveListItems.filter((i) => i.isGroup || i.id.includes('@g.us') || i.number.includes('@g.us') || i.number.includes('broadcast'));
     }
     if (activeNav === 'sent') {
       return liveListItems.filter((i) => i.status === 'sent');
@@ -738,14 +739,14 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
       ) : (
         <div className="flex-1 h-full flex flex-row min-w-0 overflow-hidden">
           {/* ========================================================= */}
-          {/* ZONE 2: MIDDLE LIST (~320px desktop & tablet)             */}
+          {/* ZONE 2: MIDDLE LIST (380px on desktop, 100% on mobile)    */}
           {/* ========================================================= */}
           <div
             className={`h-full shrink-0 ${
-              mobileScreen === 'conversation' ? 'hidden md:flex' : 'flex w-full md:w-[320px] lg:w-[360px]'
-            }`}
+              mobileScreen === 'conversation' ? 'hidden md:flex' : 'flex'
+            } w-full md:w-[380px]`}
           >
-            <div className="flex-1 h-full flex flex-col min-w-0">
+            <div className="flex-1 h-full flex flex-col min-w-0 md:w-[380px]">
               <ScheduleList
                 items={displayedListItems}
                 selectedId={selectedId || (displayedListItems[0]?.id ?? null)}
@@ -793,7 +794,7 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
           {/* ========================================================= */}
           <div
             className={`flex-1 h-full min-w-0 overflow-hidden ${
-              mobileScreen === 'list' ? 'hidden md:flex' : 'flex w-full'
+              mobileScreen === 'list' ? 'hidden md:flex' : 'flex'
             }`}
           >
             <ConversationPane

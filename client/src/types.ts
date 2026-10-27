@@ -59,4 +59,5 @@ export interface ConversationItem {
   hasMedia: boolean;
   hasScheduled?: boolean;
   avatarColor?: string;
+  isGroup?: boolean;
 }

@@ -20,6 +20,7 @@ export interface ScheduleListItem {
   status: 'pending' | 'processing' | 'sent' | 'failed';
   unreadCount?: number;
   hasMedia?: boolean;
+  isGroup?: boolean;
 }
 
 interface ScheduleListProps {
@@ -110,14 +111,15 @@ export const ScheduleList: React.FC<ScheduleListProps> = ({
         ) : (
           filtered.map((item) => {
             const isSelected = selectedId === item.id;
-            const initials = item.name
+            const hasLetters = item.name && /[a-zA-Z\u0600-\u06FF]/.test(item.name);
+            const initials = hasLetters
               ? item.name
                   .split(' ')
                   .map((n) => n[0])
                   .join('')
                   .slice(0, 2)
                   .toUpperCase()
-              : 'WA';
+              : null;
 
             return (
               <div
@@ -125,16 +127,20 @@ export const ScheduleList: React.FC<ScheduleListProps> = ({
                 onClick={() => onSelectSchedule(item.id)}
                 className={`p-3.5 flex items-start gap-3 cursor-pointer transition-all ${
                   isSelected
-                    ? 'bg-blue-50/70 dark:bg-blue-950/40 border-l-4 border-blue-600 dark:border-blue-500'
+                    ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-l-4 border-[#00A884]'
                     : 'hover:bg-slate-50/80 dark:hover:bg-[#142332]/50'
                 }`}
               >
                 {/* Avatar */}
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 text-white shadow-xs"
-                  style={{ backgroundColor: item.avatarColor || '#3B82F6' }}
+                  style={{ backgroundColor: item.avatarColor || '#00A884' }}
                 >
-                  {initials}
+                  {initials ? (
+                    initials
+                  ) : (
+                    <User className="w-4 h-4 text-white/90" />
+                  )}
                 </div>
 
                 <div className="flex-1 min-w-0">

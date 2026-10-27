@@ -355,6 +355,7 @@ export class ApiController {
             unreadCount: msg.sender === 'incoming' ? 1 : 0,
             hasMedia: !!msg.mediaUrl,
             avatarColor: '#00A884',
+            isGroup: jidKey.includes('@g.us'),
           });
         }
       }
@@ -399,6 +400,7 @@ export class ApiController {
             hasMedia: !!sch.mediaPath,
             hasScheduled: sch.status === 'pending',
             avatarColor: '#10B981',
+            isGroup: jidKey.includes('@g.us'),
           });
         }
       }
@@ -432,6 +434,7 @@ export class ApiController {
             unreadCount: 0,
             hasMedia: false,
             avatarColor: '#059669',
+            isGroup: contact.id.includes('@g.us'),
           });
         }
       }
