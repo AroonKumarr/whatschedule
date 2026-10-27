@@ -232,22 +232,45 @@ export class ApiController {
 
       const rawNumber = jid.replace(/[^0-9]/g, '');
 
+      // Identify associated contact to also find cross-referenced LIDs or phone numbers
+      const contact = await prisma.contact.findFirst({
+        where: {
+          OR: [
+            { id: jid },
+            ...(rawNumber ? [{ number: rawNumber }, { id: { contains: rawNumber } }] : []),
+          ],
+        },
+      });
+
+      const orConditions: any[] = [
+        { jid: jid },
+        ...(rawNumber ? [{ jid: { contains: rawNumber } }] : []),
+      ];
+
+      if (contact) {
+        orConditions.push({ jid: contact.id });
+        if (contact.number) {
+          orConditions.push({ jid: { contains: contact.number } });
+        }
+      }
+
       // 1. Fetch live sent/received chat history from chatMessage table
       const chatHistory = await (prisma as any).chatMessage.findMany({
         where: {
-          OR: [
-            { jid: { contains: rawNumber } },
-            { jid: jid },
-          ],
+          OR: orConditions,
         },
         orderBy: { timestamp: 'asc' },
-        take: 100,
+        take: 150,
       });
 
       // 2. Also fetch scheduled dispatches for this recipient
       const scheduled = await prisma.scheduledMessage.findMany({
         where: {
-          recipient: { contains: rawNumber },
+          OR: [
+            { recipient: jid },
+            ...(rawNumber ? [{ recipient: { contains: rawNumber } }] : []),
+            ...(contact ? [{ recipient: contact.id }, { recipient: { contains: contact.number } }] : []),
+          ],
         },
         orderBy: { scheduledAt: 'asc' },
       });
@@ -258,6 +281,169 @@ export class ApiController {
           history: chatHistory,
           scheduled,
         },
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // Get Unified Conversations List with Latest Message & Metadata
+  public static async getConversations(req: Request, res: Response) {
+    try {
+      // 1. Fetch all contacts (excluding newsletters and broadcast status)
+      const contacts = await prisma.contact.findMany({
+        where: {
+          NOT: [
+            { id: { contains: '@newsletter' } },
+            { id: { contains: 'broadcast' } },
+          ],
+        },
+      });
+
+      // 2. Fetch recent chat messages (last 300)
+      const recentMessages = await (prisma as any).chatMessage.findMany({
+        where: {
+          NOT: [
+            { jid: { contains: '@newsletter' } },
+            { jid: { contains: 'broadcast' } },
+          ],
+        },
+        orderBy: { timestamp: 'desc' },
+        take: 300,
+      });
+
+      // 3. Fetch all scheduled messages
+      const schedules = await prisma.scheduledMessage.findMany({
+        orderBy: { scheduledAt: 'desc' },
+        take: 100,
+      });
+
+      const convMap = new Map<string, any>();
+
+      // Group recent chat messages first (newest messages take priority)
+      for (const msg of recentMessages) {
+        const jidKey = msg.jid;
+        const rawNum = jidKey.replace(/[^0-9]/g, '');
+
+        let existingKey = convMap.has(jidKey) ? jidKey : null;
+        if (!existingKey && rawNum) {
+          for (const key of convMap.keys()) {
+            if (key.includes(rawNum)) {
+              existingKey = key;
+              break;
+            }
+          }
+        }
+
+        const key = existingKey || jidKey;
+        if (!convMap.has(key)) {
+          const contact = contacts.find((c) => c.id === key || (rawNum && c.number === rawNum));
+          let displayName = contact?.name;
+          if (!displayName || displayName.replace(/[.\s_-]/g, '').length === 0) {
+            displayName = rawNum ? `+${rawNum}` : 'WhatsApp User';
+          }
+
+          convMap.set(key, {
+            id: key,
+            jid: jidKey,
+            name: displayName,
+            number: contact?.number || rawNum,
+            lastMessage: msg.content || (msg.mediaUrl ? '[Media]' : '[Message]'),
+            lastTimestamp: msg.timestamp ? new Date(msg.timestamp).toISOString() : new Date().toISOString(),
+            sender: msg.sender,
+            status: msg.status === 'received' ? 'received' : 'sent',
+            unreadCount: msg.sender === 'incoming' ? 1 : 0,
+            hasMedia: !!msg.mediaUrl,
+            avatarColor: '#00A884',
+          });
+        }
+      }
+
+      // Merge with scheduled messages
+      for (const sch of schedules) {
+        const jidKey = sch.recipient;
+        const rawNum = jidKey.replace(/[^0-9]/g, '');
+
+        let existingKey = convMap.has(jidKey) ? jidKey : null;
+        if (!existingKey && rawNum) {
+          for (const key of convMap.keys()) {
+            if (key.includes(rawNum)) {
+              existingKey = key;
+              break;
+            }
+          }
+        }
+
+        if (existingKey) {
+          const conv = convMap.get(existingKey);
+          if (sch.status === 'pending') {
+            conv.hasScheduled = true;
+          }
+        } else {
+          const contact = contacts.find((c) => c.id === jidKey || (rawNum && c.number === rawNum));
+          let displayName = sch.recipientName || contact?.name;
+          if (!displayName || displayName.replace(/[.\s_-]/g, '').length === 0) {
+            displayName = rawNum ? `+${rawNum}` : 'WhatsApp Contact';
+          }
+
+          convMap.set(jidKey, {
+            id: jidKey,
+            jid: jidKey,
+            name: displayName,
+            number: contact?.number || rawNum,
+            lastMessage: sch.content || (sch.mediaPath ? `[${sch.type.toUpperCase()}]` : 'Scheduled message'),
+            lastTimestamp: sch.scheduledAt ? new Date(sch.scheduledAt).toISOString() : new Date().toISOString(),
+            sender: 'outgoing',
+            status: sch.status,
+            unreadCount: 0,
+            hasMedia: !!sch.mediaPath,
+            hasScheduled: sch.status === 'pending',
+            avatarColor: '#10B981',
+          });
+        }
+      }
+
+      // Merge remaining contacts that haven't chatted or scheduled yet
+      for (const contact of contacts) {
+        const rawNum = contact.number || contact.id.replace(/[^0-9]/g, '');
+        let exists = false;
+        for (const key of convMap.keys()) {
+          if (key === contact.id || (rawNum && key.includes(rawNum))) {
+            exists = true;
+            break;
+          }
+        }
+
+        if (!exists) {
+          let displayName = contact.name;
+          if (!displayName || displayName.replace(/[.\s_-]/g, '').length === 0) {
+            displayName = rawNum ? `+${rawNum}` : 'WhatsApp Contact';
+          }
+
+          convMap.set(contact.id, {
+            id: contact.id,
+            jid: contact.id,
+            name: displayName,
+            number: contact.number || rawNum,
+            lastMessage: 'Tap to start conversation',
+            lastTimestamp: contact.lastContactedAt ? new Date(contact.lastContactedAt).toISOString() : contact.createdAt.toISOString(),
+            sender: 'incoming',
+            status: 'sent',
+            unreadCount: 0,
+            hasMedia: false,
+            avatarColor: '#059669',
+          });
+        }
+      }
+
+      // Sort by newest activity first (identical to WhatsApp Web)
+      const conversations = Array.from(convMap.values()).sort((a, b) => {
+        return new Date(b.lastTimestamp).getTime() - new Date(a.lastTimestamp).getTime();
+      });
+
+      return res.json({
+        success: true,
+        data: conversations,
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });

@@ -232,8 +232,14 @@ class WhatsAppService {
         for (const msg of messages) {
           if (!msg.message) continue;
 
-          const remoteJid = msg.key.remoteJid;
-          if (!remoteJid) continue;
+          const rawRemoteJid = msg.key.remoteJid;
+          if (!rawRemoteJid) continue;
+
+          // Check for sender phone number JID if stanza provided it
+          const senderPn = (msg.key as any).senderPn || (msg.key as any).participantPn;
+          const remoteJid = (rawRemoteJid.endsWith('@lid') && senderPn)
+            ? (senderPn.includes('@') ? senderPn : `${senderPn}@s.whatsapp.net`)
+            : rawRemoteJid;
 
           const isFromMe = !!msg.key.fromMe;
           const text = (
@@ -267,13 +273,15 @@ class WhatsAppService {
             // Auto-sync contact in phonebook with WhatsApp name
             if (!remoteJid.includes('@g.us') && !remoteJid.includes('broadcast')) {
               const cleanNumber = remoteJid.replace(/[^0-9]/g, '');
-              const pushName = msg.pushName || undefined;
+              const hasLettersOrNumbers = !!(msg.pushName && /[a-zA-Z0-9\u0600-\u06FF]/.test(msg.pushName));
+              const pushName = (hasLettersOrNumbers && msg.pushName) ? msg.pushName.trim() : undefined;
+
               await prisma.contact.upsert({
                 where: { id: remoteJid },
                 create: {
                   id: remoteJid,
                   number: cleanNumber,
-                  name: pushName || cleanNumber,
+                  name: pushName || (cleanNumber ? `+${cleanNumber}` : 'WhatsApp Contact'),
                   lastContactedAt: new Date(),
                 },
                 update: {
@@ -413,6 +421,33 @@ class WhatsAppService {
         }
 
         this.notifyReceipts();
+      });
+
+      // Map privacy LIDs to Phone Numbers automatically when shared by WhatsApp
+      (this.sock.ev as any).on('chats.phoneNumberShare', async ({ lid, jid }: { lid: string; jid: string }) => {
+        try {
+          if (lid && jid) {
+            const cleanNumber = jid.replace(/[^0-9]/g, '');
+            await (prisma as any).chatMessage.updateMany({
+              where: { jid: lid },
+              data: { jid: jid },
+            });
+            await prisma.contact.upsert({
+              where: { id: jid },
+              create: {
+                id: jid,
+                number: cleanNumber,
+                name: cleanNumber ? `+${cleanNumber}` : 'WhatsApp Contact',
+                lastContactedAt: new Date(),
+              },
+              update: {
+                number: cleanNumber,
+                lastContactedAt: new Date(),
+              },
+            }).catch(() => {});
+            this.notifyReceipts();
+          }
+        } catch (err) {}
       });
 
       // Sync and store contacts into SQLite automatically

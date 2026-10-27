@@ -45,6 +45,7 @@ app.get('/api/status', ApiController.getStatus);
 app.post('/api/logout', requireAuth, ApiController.logout);
 app.get('/api/contacts', requireAuth, ApiController.getContacts);
 app.post('/api/contacts/import', requireAuth, ApiController.importContacts);
+app.get('/api/conversations', requireAuth, ApiController.getConversations);
 app.get('/api/chats/:jid', requireAuth, ApiController.getChatMessages);
 app.post('/api/contacts', requireAuth, ApiController.saveContact);
 app.post('/api/ai/draft', requireAuth, ApiController.generateAIDraft);
@@ -94,6 +95,7 @@ wss.on('connection', (ws: WebSocket) => {
   const unsubscribeReceipts = whatsAppService.subscribeReceipts(() => {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'QUEUE_UPDATE' }));
+      ws.send(JSON.stringify({ type: 'CHAT_UPDATE' }));
     }
   });
 

@@ -1,4 +1,4 @@
-import { ScheduledMessage, Contact, WhatsAppStatus, QueueStats } from '../types';
+import { ScheduledMessage, Contact, WhatsAppStatus, QueueStats, ConversationItem } from '../types';
 
 const API_BASE = '/api';
 
@@ -230,6 +230,14 @@ export const api = {
     });
     const data = await res.json();
     return data.data || { history: [], scheduled: [] };
+  },
+
+  async getConversations(): Promise<ConversationItem[]> {
+    const res = await fetch(`${API_BASE}/conversations`, {
+      headers: this.getHeaders(),
+    });
+    const data = await res.json();
+    return data.data || [];
   },
 
   async createSchedule(formData: FormData): Promise<ScheduledMessage> {

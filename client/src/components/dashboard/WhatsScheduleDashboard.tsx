@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ScheduledMessage, Contact, WhatsAppStatus, QueueStats } from '../../types';
+import { ScheduledMessage, Contact, WhatsAppStatus, QueueStats, ConversationItem } from '../../types';
 import { NavRail, NavItemKey } from './NavRail';
 import { ScheduleList, ScheduleListItem } from './ScheduleList';
 import { ConversationPane, ChatMessageItem } from './ConversationPane';
@@ -30,6 +30,7 @@ import { format, isToday, isTomorrow } from 'date-fns';
 interface WhatsScheduleDashboardProps {
   schedules: ScheduledMessage[];
   contacts: Contact[];
+  conversations?: ConversationItem[];
   status: WhatsAppStatus;
   stats: QueueStats;
   selectedId: string | null;
@@ -47,6 +48,7 @@ interface WhatsScheduleDashboardProps {
   onToggleTheme?: () => void;
   isSending?: boolean;
   onRefreshContacts?: () => Promise<void>;
+  onRefreshConversations?: () => Promise<void>;
 }
 
 // Built-in Seed Conversations as specified in reference UI spec
@@ -160,6 +162,8 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
   onToggleTheme,
   isSending = false,
   onRefreshContacts,
+  conversations = [],
+  onRefreshConversations,
 }) => {
   // Default to 'messages' (WhatsApp Chats View) after linking, as per WhatsApp-first design
   const [activeNav, setActiveNav] = useState<NavItemKey>('messages');
@@ -171,7 +175,34 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
   const liveListItems: ScheduleListItem[] = useMemo(() => {
     const norm = (str?: string) => (str ? str.replace(/[^0-9]/g, '') : '');
 
-    // 1. Group DB schedules by recipient JID
+    // Priority 1: Use unified conversations from database if present (shows live incoming & outgoing chats)
+    if (conversations && conversations.length > 0) {
+      return conversations.map((conv) => {
+        let formattedTime = '';
+        try {
+          const d = new Date(conv.lastTimestamp);
+          if (isToday(d)) formattedTime = format(d, 'h:mm a');
+          else if (isTomorrow(d)) formattedTime = 'Tomorrow';
+          else formattedTime = format(d, 'MMM d');
+        } catch {
+          formattedTime = '';
+        }
+
+        return {
+          id: conv.id || conv.jid,
+          name: conv.name,
+          number: conv.number || conv.jid,
+          avatarColor: conv.avatarColor || '#00A884',
+          previewText: conv.lastMessage || 'No messages yet',
+          nextSendTime: formattedTime,
+          status: conv.hasScheduled ? 'pending' : (conv.status === 'failed' ? 'failed' : 'sent'),
+          unreadCount: conv.unreadCount || 0,
+          hasMedia: conv.hasMedia,
+        };
+      });
+    }
+
+    // Fallback: Group DB schedules by recipient JID
     const grouped = new Map<string, ScheduledMessage[]>();
     schedules.forEach((s) => {
       const list = grouped.get(s.recipient) || [];
@@ -234,24 +265,34 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
       }
     });
 
-    // 2. Combine with seed items so the UI is completely populated
-    const seedFormatted: ScheduleListItem[] = SEED_RECIPIENTS.map((s) => ({
-      id: s.id,
-      name: s.name,
-      number: s.number,
-      avatarColor: s.avatarColor,
-      previewText: s.previewText,
-      nextSendTime: s.nextSendTime,
-      status: s.status,
-      unreadCount: s.unreadCount,
-      hasMedia: s.hasMedia,
-    }));
+    // Combine with seed items only if there are no real items
+    if (realItems.length === 0) {
+      const seedFormatted: ScheduleListItem[] = SEED_RECIPIENTS.map((s) => ({
+        id: s.id,
+        name: s.name,
+        number: s.number,
+        avatarColor: s.avatarColor,
+        previewText: s.previewText,
+        nextSendTime: s.nextSendTime,
+        status: s.status,
+        unreadCount: s.unreadCount,
+        hasMedia: s.hasMedia,
+      }));
+      return seedFormatted;
+    }
 
-    return [...realItems, ...seedFormatted];
-  }, [schedules, contacts]);
+    return realItems;
+  }, [conversations, schedules, contacts]);
 
   // Filter items based on activeNav selection
   const displayedListItems = useMemo(() => {
+    if (activeNav === 'messages') {
+      // 1-on-1 direct conversations & scheduled messages
+      return liveListItems.filter((i) => !i.number.includes('@g.us'));
+    }
+    if (activeNav === 'groups') {
+      return liveListItems.filter((i) => i.number.includes('@g.us') || i.number.includes('broadcast'));
+    }
     if (activeNav === 'sent') {
       return liveListItems.filter((i) => i.status === 'sent');
     }
@@ -261,55 +302,102 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
     if (activeNav === 'drafts') {
       return liveListItems.filter((i) => i.status === 'pending');
     }
-    if (activeNav === 'groups') {
-      return liveListItems.filter((i) => i.number.includes('@g.us') || i.number.includes('broadcast'));
-    }
     return liveListItems;
   }, [liveListItems, activeNav]);
 
   // Determine currently selected conversation & messages
   const currentConversation = useMemo(() => {
-    const activeId = selectedId || (displayedListItems.length > 0 ? displayedListItems[0].id : 'seed-ayesha');
-
-    // 1. Check seed items first
-    const seed = SEED_RECIPIENTS.find((s) => s.id === activeId);
-    if (seed) {
-      return {
-        recipient: {
-          id: seed.id,
-          name: seed.name,
-          number: seed.number,
-          avatarColor: seed.avatarColor,
-          subtitle: seed.subtitle,
-        },
-        messages: seed.messages,
-      };
-    }
+    const activeId = selectedId || (displayedListItems.length > 0 ? displayedListItems[0].id : null);
 
     const norm = (str?: string) => (str ? str.replace(/[^0-9]/g, '') : '');
-    const cleanActive = norm(activeId);
+    const cleanActive = activeId ? norm(activeId) : '';
 
-    // 2. Match real contact
-    const contact = contacts.find(
-      (c) =>
-        c.id === activeId ||
-        c.number === activeId ||
-        (cleanActive && (norm(c.id) === cleanActive || norm(c.number) === cleanActive))
-    );
+    // 1. Check real conversations first
+    if (activeId && conversations && conversations.length > 0) {
+      const conv = conversations.find(
+        (c) =>
+          c.id === activeId ||
+          c.jid === activeId ||
+          (cleanActive && (norm(c.id) === cleanActive || norm(c.jid) === cleanActive || norm(c.number) === cleanActive))
+      );
 
-    // 3. Match real schedules
-    const matchedSchedules = schedules.filter(
-      (s) =>
-        s.id === activeId ||
-        s.recipient === activeId ||
-        (cleanActive && norm(s.recipient) === cleanActive) ||
-        (contact && norm(s.recipient) === norm(contact.number))
-    );
+      if (conv) {
+        const recipientNumber = conv.number || conv.jid;
+        const matchedSchedules = schedules.filter(
+          (s) =>
+            s.recipient === conv.jid ||
+            (cleanActive && norm(s.recipient) === cleanActive) ||
+            (conv.number && norm(s.recipient) === norm(conv.number))
+        );
+
+        const msgs: ChatMessageItem[] = matchedSchedules.map((s) => ({
+          id: s.id,
+          sender: 'outgoing',
+          content: s.content || '',
+          timestamp: format(new Date(s.scheduledAt), 'MMM d, h:mm a'),
+          status: s.status,
+          deliveryStatus: s.deliveryStatus,
+          scheduledAt: s.scheduledAt,
+          mediaUrl: s.mediaPath ? `/uploads/${s.mediaPath.split('/').pop()}` : null,
+          mediaType: s.type,
+          mediaName: s.mediaFileName || undefined,
+        }));
+
+        return {
+          recipient: {
+            id: conv.jid || conv.id,
+            name: conv.name,
+            number: recipientNumber,
+            avatarColor: conv.avatarColor || '#00A884',
+            subtitle: `WhatsApp • ${recipientNumber}`,
+          },
+          messages: msgs,
+        };
+      }
+    }
+
+    // 2. Check seed items if activeId is seed
+    if (activeId) {
+      const seed = SEED_RECIPIENTS.find((s) => s.id === activeId);
+      if (seed) {
+        return {
+          recipient: {
+            id: seed.id,
+            name: seed.name,
+            number: seed.number,
+            avatarColor: seed.avatarColor,
+            subtitle: seed.subtitle,
+          },
+          messages: seed.messages,
+        };
+      }
+    }
+
+    // 3. Match real contact
+    const contact = activeId
+      ? contacts.find(
+          (c) =>
+            c.id === activeId ||
+            c.number === activeId ||
+            (cleanActive && (norm(c.id) === cleanActive || norm(c.number) === cleanActive))
+        )
+      : null;
+
+    // 4. Match real schedules
+    const matchedSchedules = activeId
+      ? schedules.filter(
+          (s) =>
+            s.id === activeId ||
+            s.recipient === activeId ||
+            (cleanActive && norm(s.recipient) === cleanActive) ||
+            (contact && norm(s.recipient) === norm(contact.number))
+        )
+      : [];
 
     const primarySchedule = matchedSchedules.find((s) => s.id === activeId) || matchedSchedules[0];
 
     if (contact || primarySchedule) {
-      const recipientNumber = contact?.number || primarySchedule?.recipient || activeId;
+      const recipientNumber = contact?.number || primarySchedule?.recipient || (activeId || '');
       const recipientName =
         contact?.name ||
         primarySchedule?.recipientName ||
@@ -331,7 +419,7 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
 
       return {
         recipient: {
-          id: contact?.id || primarySchedule?.recipient || activeId,
+          id: contact?.id || primarySchedule?.recipient || (activeId || ''),
           name: recipientName,
           number: recipientNumber,
           avatarColor: '#10B981',
@@ -342,7 +430,7 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
     }
 
     return null;
-  }, [selectedId, schedules, contacts, displayedListItems]);
+  }, [selectedId, conversations, schedules, contacts, displayedListItems]);
 
   const handleSelectRow = (id: string) => {
     onSelectSchedule(id);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ScheduledMessage, Contact, WhatsAppStatus, QueueStats } from './types';
+import { ScheduledMessage, Contact, WhatsAppStatus, QueueStats, ConversationItem } from './types';
 import { api, AuthStatus } from './services/api';
 import { useTheme } from './hooks/useTheme';
 import { QRLoginPage } from './components/QRLoginPage';
@@ -35,6 +35,7 @@ export const App: React.FC = () => {
 
   const [schedules, setSchedules] = useState<ScheduledMessage[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [stats, setStats] = useState<QueueStats>({ total: 0, pending: 0, sent: 0, failed: 0 });
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -88,6 +89,13 @@ export const App: React.FC = () => {
     } catch (err) {}
   }, []);
 
+  const refreshConversations = useCallback(async () => {
+    try {
+      const data = await api.getConversations();
+      setConversations(data);
+    } catch (err) {}
+  }, []);
+
   // QR Screen Fast Polling — keeps status fresh even before WebSocket is active
   // This is the ONLY path to detect connection when on the login page
   useEffect(() => {
@@ -116,6 +124,7 @@ export const App: React.FC = () => {
     refreshSchedules();
     refreshStats();
     refreshContacts();
+    refreshConversations();
 
     let ws: WebSocket | null = null;
     let reconnectTimeout: any = null;
@@ -131,10 +140,11 @@ export const App: React.FC = () => {
           const payload = JSON.parse(event.data);
           if (payload.type === 'STATUS_UPDATE') {
             setStatus(payload.data);
-          } else if (payload.type === 'QUEUE_UPDATE') {
+          } else if (payload.type === 'QUEUE_UPDATE' || payload.type === 'CHAT_UPDATE') {
             refreshSchedules();
             refreshStats();
             refreshContacts();
+            refreshConversations();
           }
         } catch (e) {}
       };
@@ -307,6 +317,7 @@ export const App: React.FC = () => {
       <WhatsScheduleDashboard
         schedules={schedules}
         contacts={contacts}
+        conversations={conversations}
         status={status}
         stats={stats}
         selectedId={selectedId}
@@ -327,6 +338,7 @@ export const App: React.FC = () => {
         onToggleTheme={toggleTheme}
         isSending={sendingId !== null}
         onRefreshContacts={refreshContacts}
+        onRefreshConversations={refreshConversations}
       />
 
       {/* Redesigned Settings Modal Overlay */}

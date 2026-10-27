@@ -45,3 +45,18 @@ export interface QueueStats {
   failed: number;
   isPaused?: boolean;
 }
+
+export interface ConversationItem {
+  id: string;
+  jid: string;
+  name: string;
+  number: string;
+  lastMessage: string;
+  lastTimestamp: string;
+  sender: 'incoming' | 'outgoing';
+  status: 'sent' | 'received' | 'pending' | 'failed';
+  unreadCount: number;
+  hasMedia: boolean;
+  hasScheduled?: boolean;
+  avatarColor?: string;
+}
