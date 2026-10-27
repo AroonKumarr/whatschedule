@@ -154,6 +154,48 @@ export class ApiController {
     }
   }
 
+  // Batch import contacts directly from phone contacts picker or VCF/CSV
+  public static async importContacts(req: Request, res: Response) {
+    try {
+      const { contacts } = req.body;
+      if (!Array.isArray(contacts) || contacts.length === 0) {
+        return res.status(400).json({ success: false, error: 'contacts array is required' });
+      }
+
+      let imported = 0;
+      for (const c of contacts) {
+        const rawNum = String(c.tel || c.number || '').replace(/[^0-9]/g, '');
+        if (!rawNum || rawNum.length < 7) continue;
+
+        const name = String(c.name || rawNum).trim();
+        const jid = rawNum.includes('@') ? rawNum : `${rawNum}@s.whatsapp.net`;
+
+        await prisma.contact.upsert({
+          where: { id: jid },
+          create: {
+            id: jid,
+            number: rawNum,
+            name,
+            lastContactedAt: new Date(),
+          },
+          update: {
+            name: name || undefined,
+            lastContactedAt: new Date(),
+          },
+        }).catch(() => {});
+        imported++;
+      }
+
+      return res.json({
+        success: true,
+        message: `Imported ${imported} contact${imported === 1 ? '' : 's'} successfully`,
+        count: imported,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
   public static async getStatus(req: Request, res: Response) {
     const status = whatsAppService.getStatus();
     return res.json({ success: true, data: status });

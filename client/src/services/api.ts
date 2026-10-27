@@ -159,6 +159,22 @@ export const api = {
     return data.data;
   },
 
+  async importContacts(contacts: Array<{ name: string; tel: string }>): Promise<{ count: number; message: string }> {
+    const res = await fetch(`${API_BASE}/contacts/import`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.getHeaders(),
+      },
+      body: JSON.stringify({ contacts }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to import contacts');
+    }
+    return data;
+  },
+
   async generateAIDraft(prompt: string, tone: string = 'professional', recipientRole?: string): Promise<string> {
     const res = await fetch(`${API_BASE}/ai/draft`, {
       method: 'POST',

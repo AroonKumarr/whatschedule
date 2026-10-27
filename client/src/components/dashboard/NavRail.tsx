@@ -86,7 +86,7 @@ export const NavRail: React.FC<NavRailProps> = ({
                 onClick={() => onSelectItem(item.key)}
                 className={`w-full flex items-center justify-center lg:justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 group cursor-pointer ${
                   isActive
-                    ? 'bg-[#1E75FF] text-white shadow-md shadow-blue-500/25'
+                    ? 'bg-[#00A884] text-white shadow-md shadow-emerald-600/25'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
                 title={item.label}

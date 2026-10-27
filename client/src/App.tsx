@@ -326,6 +326,7 @@ export const App: React.FC = () => {
         themeMode={themeMode}
         onToggleTheme={toggleTheme}
         isSending={sendingId !== null}
+        onRefreshContacts={refreshContacts}
       />
 
       {/* Redesigned Settings Modal Overlay */}

@@ -227,7 +227,7 @@ class WhatsAppService {
 
       // Listen for Inbound & Outbound Messages to Sync Live Chat Thread & Opt-Outs
       this.sock.ev.on('messages.upsert', async ({ messages, type }) => {
-        if (type !== 'notify') return;
+        if (type !== 'notify' && type !== 'append') return;
 
         for (const msg of messages) {
           if (!msg.message) continue;
@@ -241,6 +241,8 @@ class WhatsAppService {
             msg.message.extendedTextMessage?.text ||
             msg.message.imageMessage?.caption ||
             msg.message.videoMessage?.caption ||
+            msg.message.documentMessage?.caption ||
+            msg.message.documentMessage?.title ||
             ''
           ).trim();
 

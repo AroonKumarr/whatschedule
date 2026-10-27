@@ -46,6 +46,7 @@ interface WhatsScheduleDashboardProps {
   themeMode?: 'light' | 'dark' | 'auto';
   onToggleTheme?: () => void;
   isSending?: boolean;
+  onRefreshContacts?: () => Promise<void>;
 }
 
 // Built-in Seed Conversations as specified in reference UI spec
@@ -158,6 +159,7 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
   themeMode = 'auto',
   onToggleTheme,
   isSending = false,
+  onRefreshContacts,
 }) => {
   // Default to 'messages' (WhatsApp Chats View) after linking, as per WhatsApp-first design
   const [activeNav, setActiveNav] = useState<NavItemKey>('messages');
@@ -501,6 +503,7 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
         <div className="flex-1 h-full flex flex-col min-w-0 overflow-hidden">
           <ContactsView
             contacts={contacts}
+            onRefreshContacts={onRefreshContacts}
             onSelectContact={(contact) => {
               // Find matching schedule or set recipient
               const matching = schedules.find((s) => s.recipient === contact.id);
