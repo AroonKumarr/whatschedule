@@ -115,12 +115,14 @@ export const ConversationPane: React.FC<ConversationPaneProps> = ({
             if (s.status === 'sent' && seenMessageIds.has(s.id)) return;
 
             const rawTs = s.scheduledAt ? new Date(s.scheduledAt).getTime() : Date.now();
+            const diffMins = Math.round((rawTs - Date.now()) / 60000);
+            const countdownStr = diffMins > 0 ? ` (in ${diffMins}m)` : ' (due now)';
             combined.push({
               id: s.id,
               sender: 'outgoing',
               content: s.content || (s.status === 'pending' ? '(Scheduled Message)' : ''),
               timestamp: s.status === 'pending'
-                ? `Scheduled: ${new Date(rawTs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}`
+                ? `Scheduled: ${new Date(rawTs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}${countdownStr}`
                 : new Date(rawTs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }),
               status: s.status,
               deliveryStatus: s.deliveryStatus,

@@ -36,10 +36,10 @@ export const SchedulePopover: React.FC<SchedulePopoverProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  // Default to 2 minutes from now so quick testing dispatches quickly
+  // Default to 1 minute from now for effortless fast testing
   const [dateTime, setDateTime] = useState<string>(() => {
     if (initialDateTime) return initialDateTime;
-    return format(addMinutes(new Date(), 2), "yyyy-MM-dd'T'HH:mm");
+    return format(addMinutes(new Date(), 1), "yyyy-MM-dd'T'HH:mm");
   });
 
   const [messageText, setMessageText] = useState<string>(initialContent);
@@ -145,6 +145,7 @@ export const SchedulePopover: React.FC<SchedulePopoverProps> = ({
         {/* Quick Presets */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {[
+            { label: '⚡ +1m (Fast Test)', mins: 1 },
             { label: '+2m', mins: 2 },
             { label: '+5m', mins: 5 },
             { label: '+15m', mins: 15 },
