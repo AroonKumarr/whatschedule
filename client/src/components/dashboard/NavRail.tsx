@@ -1,18 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Home,
-  PlusSquare,
-  Calendar,
-  Clock,
   MessageSquare,
-  TrendingUp,
-  Share2,
   Settings,
   Users,
-  FolderOpen,
-  FileCode,
-  Globe,
-  ChevronDown,
   Sparkles,
 } from 'lucide-react';
 import { BrandLogo } from '../BrandLogo';
@@ -53,24 +44,11 @@ export const NavRail: React.FC<NavRailProps> = ({
   onOpenSettings,
   className = '',
 }) => {
-  // Main Navigation Items (Exactly matching designer screens)
+  // Main Navigation Items (Clean, WhatsApp-focused)
   const navItems = [
-    { key: 'home' as const, label: 'Home', icon: Home },
-    { key: 'create' as const, label: 'Create Post', icon: PlusSquare },
-    { key: 'calendar' as const, label: 'Calendar', icon: Calendar },
-    { key: 'scheduled' as const, label: 'Scheduled Posts', icon: Clock, count: scheduledCount },
     { key: 'messages' as const, label: 'Messages', icon: MessageSquare },
-    { key: 'analytics' as const, label: 'Analytics', icon: TrendingUp },
-    { key: 'accounts' as const, label: 'Accounts', icon: Share2 },
     { key: 'contacts' as const, label: 'Contacts', icon: Users },
-  ];
-
-  const connectedSocials = [
-    { name: 'WhatsApp', color: '#25D366' },
-    { name: 'Instagram', color: '#E4405F' },
-    { name: 'Facebook', color: '#1877F2' },
-    { name: 'LinkedIn', color: '#0A66C2' },
-    { name: 'X (Twitter)', color: '#000000' },
+    { key: 'home' as const, label: 'Home', icon: Home },
   ];
 
   return (
@@ -123,46 +101,10 @@ export const NavRail: React.FC<NavRailProps> = ({
                     {item.label}
                   </span>
                 </div>
-
-                {item.count !== undefined && item.count > 0 && (
-                  <span
-                    className={`hidden lg:flex min-w-[20px] h-[20px] px-1 text-[10px] font-bold rounded-full items-center justify-center ${
-                      isActive ? 'bg-white text-blue-600' : 'bg-slate-800 text-slate-300'
-                    }`}
-                  >
-                    {item.count}
-                  </span>
-                )}
               </button>
             );
           })}
         </nav>
-
-        {/* Connected Accounts Quick Section (Matching Designer Nav) */}
-        <div className="hidden lg:block pt-3 border-t border-slate-800/80 w-full">
-          <div className="flex items-center justify-between px-2 pb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            <span>Connected Accounts</span>
-            <button
-              type="button"
-              onClick={() => onSelectItem('accounts')}
-              className="text-blue-400 hover:underline lowercase font-normal"
-            >
-              + add
-            </button>
-          </div>
-          <div className="space-y-1">
-            {connectedSocials.map((s) => (
-              <div
-                key={s.name}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-white/5 transition-colors cursor-pointer"
-                onClick={() => onSelectItem('accounts')}
-              >
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="truncate text-[11px]">{s.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Bottom Area: Settings & Open Source Banner */}

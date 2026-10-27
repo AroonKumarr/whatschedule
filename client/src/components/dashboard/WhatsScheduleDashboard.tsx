@@ -22,6 +22,8 @@ import {
   FolderOpen,
   Settings,
   Plus,
+  Home,
+  MessageSquare,
 } from 'lucide-react';
 import { format, isToday, isTomorrow } from 'date-fns';
 
@@ -667,10 +669,9 @@ export const WhatsScheduleDashboard: React.FC<WhatsScheduleDashboardProps> = ({
                 className="md:hidden h-14 bg-[#141414] border-t border-[#242424] flex items-center justify-around px-2 pb-env-safe shrink-0 z-30"
               >
                 {[
-                  { id: 'scheduled', label: 'Scheduled', icon: Clock },
-                  { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
+                  { id: 'messages', label: 'Messages', icon: MessageSquare },
                   { id: 'contacts', label: 'Contacts', icon: Users },
-                  { id: 'media', label: 'Media', icon: FolderOpen },
+                  { id: 'home', label: 'Home', icon: Home },
                   { id: 'settings', label: 'Settings', icon: Settings },
                 ].map((tab) => {
                   const Icon = tab.icon;
